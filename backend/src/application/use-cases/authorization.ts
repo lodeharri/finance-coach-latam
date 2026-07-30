@@ -10,3 +10,9 @@ export function assertCanActAs(actor: Actor, targetUserId: string): void {
     throw new Error('Forbidden: users can only act on their own resources');
   }
 }
+
+export function assertIsAdmin(actor: Actor): void {
+  if (actor.role !== 'admin') {
+    throw new Error('Forbidden: admin role required');
+  }
+}

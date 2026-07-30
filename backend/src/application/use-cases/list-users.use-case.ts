@@ -1,6 +1,7 @@
 import type { User } from '../../domain/entities/user.entity';
 import type { UserRole } from '../../domain/ports/cognito.port';
 import type { DatabasePort, TableRef } from '../../domain/ports/database.port';
+import { assertIsAdmin } from './authorization';
 
 export class ListUsersUseCase {
   constructor(
@@ -9,9 +10,7 @@ export class ListUsersUseCase {
   ) {}
 
   async execute(input: { readonly actorRole: UserRole }): Promise<User[]> {
-    if (input.actorRole !== 'admin') {
-      throw new Error('Forbidden: only admins can list users');
-    }
+    assertIsAdmin({ userId: 'system', role: input.actorRole });
 
     return this.database.select(this.userTableRef);
   }

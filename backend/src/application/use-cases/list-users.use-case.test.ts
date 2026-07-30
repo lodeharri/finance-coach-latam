@@ -35,7 +35,7 @@ describe('ListUsersUseCase', () => {
 
   it('rejects regular users', async () => {
     await expect(useCase.execute({ actorRole: 'user' })).rejects.toThrow(
-      'Forbidden: only admins can list users',
+      'Forbidden: admin role required',
     );
     expect(database.select).not.toHaveBeenCalled();
   });
