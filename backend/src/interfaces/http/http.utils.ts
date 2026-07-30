@@ -43,18 +43,42 @@ export function jsonResponse(
 }
 
 /**
- * Normalize `cognito:groups` to a flat string array. API Gateway can forward
- * the claim as an array, a comma-separated string, or a single string. We
- * accept all three and reduce to `string[]` so downstream checks are uniform.
+ * Normalize `cognito:groups` to a flat string array. API Gateway HTTP API v2
+ * can forward the claim as:
+ *   - a JSON array `["users", "admins"]` (correct, when claim has no colon)
+ *   - a JSON-stringified array `"[\"users\"]"` (rare)
+ *   - a literal string `"[users]"` (common — gateway serializes array via
+ *     Array.prototype.toString which produces `[users]` not `[\"users\"]`)
+ *   - a comma-separated string `"users,admins"` (when claim has no colon)
+ *   - a single group `"users"`
+ *
+ * We accept all five and reduce to `string[]`.
  */
 function parseGroups(raw: unknown): string[] {
   if (Array.isArray(raw)) {
     return raw.filter((g): g is string => typeof g === 'string');
   }
   if (typeof raw === 'string') {
-    return raw
+    const trimmed = raw.trim();
+    // Strip surrounding brackets if present (gateway toString of array)
+    const unwrapped =
+      trimmed.startsWith('[') && trimmed.endsWith(']')
+        ? trimmed.slice(1, -1).trim()
+        : trimmed;
+    // Try JSON.parse first (handles `[\"users\"]`); fall back to comma split
+    if (unwrapped.startsWith('"') || unwrapped.startsWith("'")) {
+      try {
+        const parsed = JSON.parse(`[${unwrapped}]`) as unknown;
+        if (Array.isArray(parsed)) {
+          return parsed.filter((g): g is string => typeof g === 'string');
+        }
+      } catch {
+        // fall through
+      }
+    }
+    return unwrapped
       .split(',')
-      .map((g) => g.trim())
+      .map((g) => g.trim().replace(/^['"]|['"]$/g, ''))
       .filter((g) => g.length > 0);
   }
   return [];
