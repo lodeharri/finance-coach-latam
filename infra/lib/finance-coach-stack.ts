@@ -109,7 +109,7 @@ export class FinanceCoachStack extends cdk.Stack {
     );
 
     const categorizerQueue = new sqs.Queue(this, 'CategorizerQueue', {
-      visibilityTimeout: Duration.seconds(60),
+      visibilityTimeout: Duration.seconds(180),
       retentionPeriod: Duration.days(14),
       deadLetterQueue: {
         queue: categorizerDlq,
