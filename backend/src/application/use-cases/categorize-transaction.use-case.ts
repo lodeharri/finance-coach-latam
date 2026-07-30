@@ -108,6 +108,12 @@ export class CategorizeTransactionUseCase {
       );
     }
 
+    // Persist the embedding on the transaction row immediately after a
+    // successful embed. The column is reserved for future use (semantic
+    // search, anomaly detection) and was historically never populated.
+    // Best-effort: a write failure must never block categorization.
+    await this.writeEmbeddingBestEffort(transaction.id, input.userId, vector);
+
     const ranked = await this.queryRankedCategories(vector);
     if (ranked.length === 0) {
       throw new Error('No categories are available');
@@ -176,6 +182,37 @@ export class CategorizeTransactionUseCase {
       await this.merchantCachePort.save(merchant, categoryId);
     } catch (err) {
       console.warn('merchant cache write failed', { merchant, err });
+    }
+  }
+
+  /**
+   * Persist the vector to transactions.embedding via the raw-SQL escape
+   * hatch. The typed Drizzle update API does not surface the embedding
+   * column on its Update shape, so we round-trip through parameterized
+   * SQL. Best-effort: a write failure must never fail the transaction —
+   * the embedding column is a future-use column and the canonical record
+   * (categoryId / status / merchant) lives on the same row already.
+   */
+  private async writeEmbeddingBestEffort(
+    transactionId: string,
+    userId: string,
+    embedding: readonly number[],
+  ): Promise<void> {
+    try {
+      if (!this.database.query) {
+        throw new Error(
+          'CategorizeTransactionUseCase: database adapter does not support raw queries',
+        );
+      }
+      await this.database.query(
+        'UPDATE transactions SET embedding = $1::vector WHERE id = $2 AND user_id = $3',
+        [JSON.stringify(embedding), transactionId, userId],
+      );
+    } catch (err) {
+      console.warn('transaction embedding write failed', {
+        transactionId,
+        err,
+      });
     }
   }
 
