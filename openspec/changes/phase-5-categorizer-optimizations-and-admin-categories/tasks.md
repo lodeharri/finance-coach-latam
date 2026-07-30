@@ -59,12 +59,12 @@ Chain strategy: pending (orchestrator will ask: stacked-to-main vs feature-branc
 
 > Per work-unit-commits: migration is its own commit BEFORE the cache code that uses the table. Both the Drizzle schema and the SQL file must land before the use case in Slice 3 can compile.
 
-- [ ] **T2.1** Add `0003_merchant_category_cache.sql` migration under `backend/drizzle/` — migration, ~15 LoC — satisfies REQ-TC-002, REQ-TC-006 (storage layer) — blocks T2.3
-- [ ] **T2.2** Add `merchantCategoryCacheTable` + `MerchantCategoryCacheRow` + `MerchantCategoryCacheInsert` to `backend/src/infrastructure/database/drizzle/schema.ts` — code, ~12 LoC — satisfies REQ-TC-002 — blocks T2.4
-- [ ] **T2.3** Create `backend/src/domain/ports/merchant-cache.port.ts` exporting `MerchantCachePort` interface (`findByMerchant`, `save`) — code, ~5 LoC — satisfies REQ-TC-002, REQ-TC-006 — blocks T2.5
-- [ ] **T2.4** Add `findByMerchant(merchant)` and `save(merchant, categoryId)` to `NeonDatabaseAdapter` in `backend/src/infrastructure/database/neon-database.adapter.ts` (use existing `query` escape hatch + `ON CONFLICT DO NOTHING`) — code, ~20 LoC — satisfies REQ-TC-002, REQ-TC-006 — blocks T2.5
-- [ ] **T2.5** Create `backend/src/infrastructure/cache/merchant-cache.adapter.ts` exporting `MerchantCacheAdapter` implementing `MerchantCachePort` (passthrough to `NeonDatabaseAdapter`) — code, ~10 LoC — satisfies REQ-TC-002, REQ-TC-006 — blocks Slice 3
-- [ ] **T2.6** Run `pnpm --filter backend typecheck` and confirm no compile errors — verification, 0 LoC
+- [x] **T2.1** Add `0003_merchant_category_cache.sql` migration under `backend/drizzle/` — migration, ~15 LoC — satisfies REQ-TC-002, REQ-TC-006 (storage layer) — blocks T2.3
+- [x] **T2.2** Add `merchantCategoryCacheTable` + `MerchantCategoryCacheRow` + `MerchantCategoryCacheInsert` to `backend/src/infrastructure/database/drizzle/schema.ts` — code, ~12 LoC — satisfies REQ-TC-002 — blocks T2.4
+- [x] **T2.3** Create `backend/src/domain/ports/merchant-cache.port.ts` exporting `MerchantCachePort` interface (`findByMerchant`, `save`) — code, ~5 LoC — satisfies REQ-TC-002, REQ-TC-006 — blocks T2.5
+- [x] **T2.4** Add `findByMerchant(merchant)` and `save(merchant, categoryId)` to `NeonDatabaseAdapter` in `backend/src/infrastructure/database/neon-database.adapter.ts` (use existing `query` escape hatch + `ON CONFLICT DO NOTHING`) — code, ~20 LoC — satisfies REQ-TC-002, REQ-TC-006 — blocks T2.5
+- [x] **T2.5** Create `backend/src/infrastructure/cache/merchant-cache.adapter.ts` exporting `MerchantCacheAdapter` implementing `MerchantCachePort` (passthrough to `NeonDatabaseAdapter`) — code, ~10 LoC — satisfies REQ-TC-002, REQ-TC-006 — blocks Slice 3
+- [x] **T2.6** Run `pnpm --filter backend typecheck` and confirm no compile errors — verification, 0 LoC
 - **Slice 2 total: ~62 LoC** (well under 400).
 
 ### Slice 3: KEYWORDS map + CategorizeTransactionUseCase rewrite + 9 new scenarios + composition wiring
