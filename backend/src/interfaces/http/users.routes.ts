@@ -1,6 +1,5 @@
 import type { CreateUserUseCase } from '../../application/use-cases/create-user.use-case';
 import type { ListUsersUseCase } from '../../application/use-cases/list-users.use-case';
-import type { TokenVerifierPort } from '../../domain/ports/auth.port';
 import {
   authenticate,
   HttpError,
@@ -12,7 +11,6 @@ import {
 } from './http.utils';
 
 export interface UsersRoutesDeps {
-  readonly tokenVerifier: TokenVerifierPort;
   readonly createUserUseCase: CreateUserUseCase;
   readonly listUsersUseCase: ListUsersUseCase;
 }
@@ -20,7 +18,7 @@ export interface UsersRoutesDeps {
 export function createUsersRoutes(deps: UsersRoutesDeps): HttpRouteHandler {
   return async (event) => {
     try {
-      const actor = await authenticate(event, deps.tokenVerifier);
+      const actor = authenticate(event);
       const method = event.requestContext.http.method;
 
       if (method === 'GET') {

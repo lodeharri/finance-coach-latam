@@ -1,7 +1,6 @@
 import type { CategorizeTransactionUseCase } from '../../application/use-cases/categorize-transaction.use-case';
 import type { CreateTransactionUseCase } from '../../application/use-cases/create-transaction.use-case';
 import type { ListTransactionsByUserUseCase } from '../../application/use-cases/list-transactions-by-user.use-case';
-import type { TokenVerifierPort } from '../../domain/ports/auth.port';
 import {
   authenticate,
   HttpError,
@@ -14,7 +13,6 @@ import {
 } from './http.utils';
 
 export interface TransactionsRoutesDeps {
-  readonly tokenVerifier: TokenVerifierPort;
   readonly createTransactionUseCase: CreateTransactionUseCase;
   readonly categorizeTransactionUseCase: CategorizeTransactionUseCase;
   readonly listTransactionsByUserUseCase: ListTransactionsByUserUseCase;
@@ -25,7 +23,7 @@ export function createTransactionsRoutes(
 ): HttpRouteHandler {
   return async (event) => {
     try {
-      const actor = await authenticate(event, deps.tokenVerifier);
+      const actor = authenticate(event);
       const method = event.requestContext.http.method;
       const categorizeMatch = event.rawPath.match(
         /^\/transactions\/([^/]+)\/categorize$/,

@@ -27,7 +27,7 @@ export class MerchantCacheAdapter implements MerchantCachePort {
         'MerchantCacheAdapter: database adapter does not support raw queries',
       );
     }
-    return this.database.query;
+    return this.database.query.bind(this.database);
   }
 
   async findByMerchant(

@@ -1,6 +1,5 @@
 import type { CreateCategoryUseCase } from '../../application/use-cases/create-category.use-case';
 import type { ListCategoriesUseCase } from '../../application/use-cases/list-categories.use-case';
-import type { TokenVerifierPort } from '../../domain/ports/auth.port';
 import {
   authenticate,
   HttpError,
@@ -14,7 +13,6 @@ import {
 const HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
 
 export interface CategoriesRoutesDeps {
-  readonly tokenVerifier: TokenVerifierPort;
   readonly listCategoriesUseCase: ListCategoriesUseCase;
   readonly createCategoryUseCase: CreateCategoryUseCase;
 }
@@ -22,7 +20,7 @@ export interface CategoriesRoutesDeps {
 export function createCategoriesRoutes(deps: CategoriesRoutesDeps): HttpRouteHandler {
   return async (event) => {
     try {
-      const actor = await authenticate(event, deps.tokenVerifier);
+      const actor = authenticate(event);
       const method = event.requestContext.http.method;
 
       if (method === 'GET') {

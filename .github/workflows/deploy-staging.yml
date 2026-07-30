@@ -1,0 +1,90 @@
+name: deploy-staging
+
+# Auto-deploy to the staging environment on every merge to main.
+# Production deploys go through deploy-production.yml (manual approval).
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write   # required for OIDC
+
+concurrency:
+  group: deploy-staging-${{ github.ref }}
+  cancel-in-progress: false   # never cancel an in-flight deploy
+
+jobs:
+  deploy:
+    name: Deploy to staging
+    environment: staging
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsRole-FinanceCoach
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Build backend bundles
+        working-directory: backend
+        run: |
+          npm ci
+          npm run build
+
+      - name: CDK deploy
+        working-directory: infra
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
+          COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.COGNITO_USER_POOL_CLIENT_ID }}
+          LLM_PROVIDER: gemini
+        run: |
+          npm ci
+          npx cdk deploy FinanceCoachStack \
+            --require-approval never \
+            --outputs-file /tmp/cdk-outputs.json
+
+      - name: Smoke test (health + endpoint presence)
+        env:
+          API_URL: ${{ steps.cdk.outputs.FinanceCoachApiUrl }}
+        run: |
+          echo "Health check..."
+          HTTP=$(curl -s -o /tmp/health.json -w "%{http_code}" "$API_URL/health")
+          if [ "$HTTP" != "200" ]; then
+            echo "✗ /health returned $HTTP"
+            cat /tmp/health.json
+            exit 1
+          fi
+          echo "✓ /health OK"
+
+          echo "Categories endpoint reachable (without auth should be 401):"
+          HTTP=$(curl -s -o /tmp/cats.json -w "%{http_code}" "$API_URL/categories")
+          if [ "$HTTP" != "401" ]; then
+            echo "✗ /categories returned $HTTP (expected 401 from API Gateway authorizer)"
+            cat /tmp/cats.json
+            exit 1
+          fi
+          echo "✓ /categories requires auth"
+
+      - name: Summary
+        run: |
+          echo "## Deploy summary" >> $GITHUB_STEP_SUMMARY
+          echo "- API URL: \`${{ steps.cdk.outputs.FinanceCoachApiUrl }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Triggered by: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY

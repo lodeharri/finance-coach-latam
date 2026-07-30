@@ -81,6 +81,9 @@ describe('CategorizeTransactionUseCase', () => {
     };
     vi.mocked(database.select).mockResolvedValueOnce([pedidosya]);
     vi.mocked(llm.embed).mockResolvedValueOnce([1, 0]);
+    // First query: best-effort UPDATE embedding (consumed before similarity).
+    vi.mocked(database.query).mockResolvedValueOnce(undefined as never);
+    // Second query: pgvector similarity ranking.
     vi.mocked(database.query).mockResolvedValueOnce(ambiguousRanking);
     vi.mocked(llm.generateText).mockResolvedValueOnce(ambiguousRanking[0]!.id);
     vi.mocked(database.update).mockResolvedValueOnce(categorized);
@@ -93,7 +96,7 @@ describe('CategorizeTransactionUseCase', () => {
 
     expect(llm.embed).toHaveBeenCalledTimes(1);
     expect(llm.embed).toHaveBeenCalledWith('PedidosYa');
-    expect(database.query).toHaveBeenCalledTimes(1);
+    expect(database.query).toHaveBeenCalledTimes(2);
     expect(database.query).toHaveBeenCalledWith(
       expect.stringContaining('embedding <=> $1::vector'),
       [JSON.stringify([1, 0])],
@@ -131,6 +134,9 @@ describe('CategorizeTransactionUseCase', () => {
   it('fails when no categories with embeddings exist', async () => {
     vi.mocked(database.select).mockResolvedValueOnce([transaction]);
     vi.mocked(llm.embed).mockResolvedValueOnce([1, 0]);
+    // First query: best-effort UPDATE embedding.
+    vi.mocked(database.query).mockResolvedValueOnce(undefined as never);
+    // Second query: similarity ranking (empty).
     vi.mocked(database.query).mockResolvedValueOnce([] as never);
 
     await expect(
@@ -153,6 +159,9 @@ describe('CategorizeTransactionUseCase', () => {
     ];
     vi.mocked(database.select).mockResolvedValueOnce([transaction]);
     vi.mocked(llm.embed).mockResolvedValueOnce([1, 0]);
+    // First query: best-effort UPDATE embedding.
+    vi.mocked(database.query).mockResolvedValueOnce(undefined as never);
+    // Second query: similarity ranking.
     vi.mocked(database.query).mockResolvedValueOnce(ambiguousRanking);
     vi.mocked(llm.generateText).mockResolvedValueOnce('not-a-category');
 
@@ -243,6 +252,9 @@ describe('CategorizeTransactionUseCase', () => {
     };
     vi.mocked(database.select).mockResolvedValueOnce([pedidosya]);
     vi.mocked(llm.embed).mockResolvedValueOnce([1, 0]);
+    // First query: best-effort UPDATE embedding.
+    vi.mocked(database.query).mockResolvedValueOnce(undefined as never);
+    // Second query: similarity ranking.
     vi.mocked(database.query).mockResolvedValueOnce([
       { id: transporteId, slug: 'transporte', name: 'Transporte', distance: 0.1 },
       { id: alimentosId, slug: 'alimentos', name: 'Alimentos', distance: 0.4 },
@@ -274,6 +286,9 @@ describe('CategorizeTransactionUseCase', () => {
     };
     vi.mocked(database.select).mockResolvedValueOnce([pedidosya]);
     vi.mocked(llm.embed).mockResolvedValueOnce([1, 0]);
+    // First query: best-effort UPDATE embedding.
+    vi.mocked(database.query).mockResolvedValueOnce(undefined as never);
+    // Second query: similarity ranking.
     vi.mocked(database.query).mockResolvedValueOnce([
       { id: transporteId, slug: 'transporte', name: 'Transporte', distance: 0.3 },
       { id: alimentosId, slug: 'alimentos', name: 'Alimentos', distance: 0.4 },
@@ -331,6 +346,9 @@ describe('CategorizeTransactionUseCase', () => {
     };
     vi.mocked(database.select).mockResolvedValueOnce([pedidosya]);
     vi.mocked(llm.embed).mockResolvedValueOnce([1, 0]);
+    // First query: best-effort UPDATE embedding.
+    vi.mocked(database.query).mockResolvedValueOnce(undefined as never);
+    // Second query: similarity ranking.
     vi.mocked(database.query).mockResolvedValueOnce([
       { id: transporteId, slug: 'transporte', name: 'Transporte', distance: 0.1 },
     ]);
@@ -409,6 +427,9 @@ describe('CategorizeTransactionUseCase', () => {
     };
     vi.mocked(database.select).mockResolvedValueOnce([pedidosya]);
     vi.mocked(llm.embed).mockResolvedValueOnce([1, 0]);
+    // First query: best-effort UPDATE embedding.
+    vi.mocked(database.query).mockResolvedValueOnce(undefined as never);
+    // Second query: similarity ranking (single row).
     vi.mocked(database.query).mockResolvedValueOnce([
       { id: transporteId, slug: 'transporte', name: 'Transporte', distance: 0.2 },
     ]);
@@ -562,5 +583,102 @@ describe('CategorizeTransactionUseCase', () => {
     // assertion is stable; ≤ 1 keeps the door open if a future fixture
     // legitimately needs the ambiguity path.
     expect(totalGenerateTextCalls).toBeLessThanOrEqual(1);
+  });
+
+  // ─── Embedding persistence on the embed path ────────────────────────────
+
+  it('persist embedding: writes the vector to transactions.embedding after a successful embed (auto-accept path)', async () => {
+    // The transactions.embedding column exists in the schema but is never
+    // populated by the legacy implementation. The fix writes the vector to
+    // the row immediately after llm.embed succeeds — best-effort, before
+    // any LLM selection work runs. This locks the contract: whenever the
+    // embed branch is reached, the vector reaches the column.
+    const pedidosya = makeTransaction({ merchant: 'PedidosYa' });
+    const categorized: Transaction = {
+      ...pedidosya,
+      categoryId: transporteId,
+      status: 'CATEGORIZED',
+    };
+    vi.mocked(database.select).mockResolvedValueOnce([pedidosya]);
+    vi.mocked(llm.embed).mockResolvedValueOnce([1, 0]);
+    // First database.query call: UPDATE transactions SET embedding = ...
+    vi.mocked(database.query).mockResolvedValueOnce(undefined as never);
+    // Second database.query call: pgvector similarity ranking.
+    vi.mocked(database.query).mockResolvedValueOnce([
+      {
+        id: transporteId,
+        slug: 'transporte',
+        name: 'Transporte',
+        distance: 0.1,
+      },
+      {
+        id: alimentosId,
+        slug: 'alimentos',
+        name: 'Alimentos',
+        distance: 0.4,
+      },
+    ]);
+    vi.mocked(database.update).mockResolvedValueOnce(categorized);
+
+    await useCase.execute({
+      actor: { userId, role: 'user' },
+      transactionId,
+      userId,
+    });
+
+    expect(database.query).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE transactions SET embedding = $1::vector'),
+      [JSON.stringify([1, 0]), transactionId, userId],
+    );
+  });
+
+  it('persist embedding: best-effort — embedding UPDATE failure does not fail the transaction', async () => {
+    // If the embedding column write throws (e.g. transient DB blip), the
+    // categorization must still complete and the transaction must still
+    // become CATEGORIZED. The embedding column is a future-use column
+    // (semantic search, anomaly detection) — losing one write is acceptable;
+    // losing the categorization is not. Mirrors the merchant-cache behaviour.
+    const pedidosya = makeTransaction({ merchant: 'PedidosYa' });
+    const categorized: Transaction = {
+      ...pedidosya,
+      categoryId: transporteId,
+      status: 'CATEGORIZED',
+    };
+    vi.mocked(database.select).mockResolvedValueOnce([pedidosya]);
+    vi.mocked(llm.embed).mockResolvedValueOnce([1, 0]);
+    // Embedding UPDATE throws.
+    vi.mocked(database.query).mockRejectedValueOnce(
+      new Error('transient pgvector write error'),
+    );
+    // Similarity ranking still proceeds.
+    vi.mocked(database.query).mockResolvedValueOnce([
+      {
+        id: transporteId,
+        slug: 'transporte',
+        name: 'Transporte',
+        distance: 0.1,
+      },
+    ]);
+    vi.mocked(database.update).mockResolvedValueOnce(categorized);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const result = await useCase.execute({
+      actor: { userId, role: 'user' },
+      transactionId,
+      userId,
+    });
+
+    expect(database.update).toHaveBeenCalledTimes(1);
+    expect(database.update).toHaveBeenCalledWith(
+      transactionTableRef,
+      { id: transactionId, userId },
+      { categoryId: transporteId, status: 'CATEGORIZED' },
+    );
+    expect(warnSpy).toHaveBeenCalledWith(
+      'transaction embedding write failed',
+      expect.objectContaining({ transactionId }),
+    );
+    expect(result).toBe(categorized);
+    warnSpy.mockRestore();
   });
 });

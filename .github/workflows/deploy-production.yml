@@ -1,0 +1,105 @@
+name: deploy-production
+
+# Manual production deploy. The `production` environment in GitHub has
+# required reviewers configured, so a human must approve before this can
+# run. Use the "Run workflow" button in the Actions UI.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type 'deploy to production' to confirm"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false   # never cancel an in-flight production deploy
+
+jobs:
+  guard:
+    name: Confirm deploy intent
+    runs-on: ubuntu-latest
+    outputs:
+      confirmed: ${{ steps.check.outputs.confirmed }}
+    steps:
+      - id: check
+        run: |
+          if [ "${{ inputs.confirm }}" = "deploy to production" ]; then
+            echo "confirmed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "✗ Refusing to deploy. Expected input 'deploy to production', got: '${{ inputs.confirm }}'"
+            exit 1
+          fi
+
+  deploy:
+    name: Deploy to production
+    needs: guard
+    if: needs.guard.outputs.confirmed == 'true'
+    environment: production   # required reviewers gate applies here
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsRole-FinanceCoach
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Build backend bundles
+        working-directory: backend
+        run: |
+          npm ci
+          npm run build
+
+      - name: CDK deploy
+        working-directory: infra
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
+          COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.COGNITO_USER_POOL_CLIENT_ID }}
+          LLM_PROVIDER: gemini
+        run: |
+          npm ci
+          npx cdk deploy FinanceCoachStack \
+            --require-approval never \
+            --outputs-file /tmp/cdk-outputs.json
+
+      - name: Production smoke test
+        env:
+          API_URL: ${{ steps.cdk.outputs.FinanceCoachApiUrl }}
+        run: |
+          set -e
+
+          echo "Health check..."
+          curl -fsS "$API_URL/health" > /dev/null && echo "✓ /health OK"
+
+          echo "Auth gate (no token → 401)..."
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" "$API_URL/categories")
+          [ "$HTTP" = "401" ] && echo "✓ /categories requires auth"
+
+      - name: Summary
+        run: |
+          echo "## Production deploy summary" >> $GITHUB_STEP_SUMMARY
+          echo "- API URL: \`${{ steps.cdk.outputs.FinanceCoachApiUrl }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Triggered by: ${{ github.actor }}\` >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ Verify in CloudWatch that the worker is processing transactions." >> $GITHUB_STEP_SUMMARY
