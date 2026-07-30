@@ -66,6 +66,12 @@ jobs:
 
       - run: npm ci
 
+      - name: Build Lambda bundles (cdk synth needs backend/dist/)
+        working-directory: backend
+        run: |
+          npm ci
+          npm run build
+
       - name: CDK synth
         env:
           DATABASE_URL: postgresql://placeholder@localhost:5432/placeholder
