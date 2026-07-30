@@ -25,13 +25,12 @@ export class GeminiLLMAdapter implements LLMPort {
       'generateText',
       // gemini-flash-latest is the alias for the newest Flash model (3.6
       // Flash). gemini-2.0-flash and gemini-2.0-flash-lite returned 429
-      // (FreeTier) on this project's API key. The `service_tier: 'flex'`
-      // request option selects Gemini's cheapest generation tier (higher
-      // latency, irrelevant for the async categorizer worker).
+      // (FreeTier) on this project's API key. The Gemini Developer API
+      // does not accept service_tier inside generationConfig — that field
+      // is Vertex AI only — so we leave generationConfig empty.
       'v1beta/models/gemini-flash-latest:generateContent',
       {
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { service_tier: 'flex' },
       },
     );
     const text = response.candidates?.[0]?.content?.parts
