@@ -90,7 +90,7 @@ describe('CreateUserUseCase', () => {
         role: 'user',
         tempPassword: 'Temp#2026!',
       }),
-    ).rejects.toThrow('Forbidden: only admins can create users');
+    ).rejects.toThrow('Forbidden: admin role required');
 
     expect(auth.createUser).not.toHaveBeenCalled();
     expect(database.insert).not.toHaveBeenCalled();
