@@ -11,15 +11,13 @@ export function buildComposition() {
   const config = getConfig();
   const database = new NeonDatabaseAdapter(config.databaseUrl);
   const llm = createLLMProvider(config.llm);
-  // Slice 3 will pass this into CategorizeTransactionUseCase. Instantiated now
-  // so the wiring change in Slice 3 stays a one-line use-case constructor edit.
   const merchantCache = new MerchantCacheAdapter(database);
-  void merchantCache;
 
   const categorizeTransactionUseCase = new CategorizeTransactionUseCase(
     database,
     llm,
     transactionTableRef,
+    merchantCache,
   );
 
   return buildCategorizerHandler({
