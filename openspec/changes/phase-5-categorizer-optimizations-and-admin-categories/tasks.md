@@ -82,12 +82,12 @@ Chain strategy: pending (orchestrator will ask: stacked-to-main vs feature-branc
 
 ### Slice 4: CreateCategoryUseCase + POST /categories route handler + route tests
 
-- [ ] **T4.1** Create `backend/src/application/use-cases/create-category.use-case.ts` (`CreateCategoryUseCase` class, `CreateCategoryInput` interface, `persistEmbedding` private helper) — code, ~50 LoC — satisfies REQ-AC-001 through REQ-AC-005 — blocks T4.2
-- [ ] **T4.2** Create `backend/src/application/use-cases/create-category.use-case.test.ts` with 6 scenarios: admin creates (no embedding), non-admin 403, duplicate slug, invalid color, embedding failure persists row, execute resolves before embedding — test, ~80 LoC — satisfies REQ-AC-001 through REQ-AC-005 — travels WITH T4.1 (same commit)
-- [ ] **T4.3** Add `POST` branch + `HttpError(409)` re-throw for duplicate-slug to `backend/src/interfaces/http/categories.routes.ts`; expand `CategoriesRoutesDeps` with `createCategoryUseCase` — code, ~25 LoC — satisfies REQ-AC-001, REQ-AC-002, REQ-AC-005 HTTP-level — blocks T4.4
-- [ ] **T4.4** Create `backend/src/interfaces/http/categories.routes.test.ts` with 5 scenarios: GET 200, POST admin 201, POST non-admin 403, POST duplicate slug 409, POST invalid color 400 — test, ~50 LoC — satisfies REQ-AC-001 through REQ-AC-005 HTTP-level — travels WITH T4.3 (same commit)
-- [ ] **T4.5** Forward `createCategoryUseCase` through `ApiRoutesDeps` in `backend/src/interfaces/http/api.routes.ts`; instantiate `CreateCategoryUseCase(database, categoryTableRef, llm)` in `backend/src/lambdas/api/composition.ts` — code, ~10 LoC — satisfies composition contract — blocks T4.6
-- [ ] **T4.6** Run `pnpm --filter backend test create-category categories.routes` and confirm green — verification, 0 LoC
+- [x] **T4.1** Create `backend/src/application/use-cases/create-category.use-case.ts` (`CreateCategoryUseCase` class, `CreateCategoryInput` interface, `persistEmbedding` private helper) — code, ~50 LoC — satisfies REQ-AC-001 through REQ-AC-005 — blocks T4.2
+- [x] **T4.2** Create `backend/src/application/use-cases/create-category.use-case.test.ts` with 6 scenarios: admin creates (no embedding), non-admin 403, duplicate slug, invalid color, embedding failure persists row, execute resolves before embedding — test, ~80 LoC — satisfies REQ-AC-001 through REQ-AC-005 — travels WITH T4.1 (same commit)
+- [x] **T4.3** Add `POST` branch + `HttpError(409)` re-throw for duplicate-slug to `backend/src/interfaces/http/categories.routes.ts`; expand `CategoriesRoutesDeps` with `createCategoryUseCase` — code, ~25 LoC — satisfies REQ-AC-001, REQ-AC-002, REQ-AC-005 HTTP-level — blocks T4.4
+- [x] **T4.4** Create `backend/src/interfaces/http/categories.routes.test.ts` with 5 scenarios: GET 200, POST admin 201, POST non-admin 403, POST duplicate slug 409, POST invalid color 400 — test, ~50 LoC — satisfies REQ-AC-001 through REQ-AC-005 HTTP-level — travels WITH T4.3 (same commit)
+- [x] **T4.5** Forward `createCategoryUseCase` through `ApiRoutesDeps` in `backend/src/interfaces/http/api.routes.ts`; instantiate `CreateCategoryUseCase(database, categoryTableRef, llm)` in `backend/src/lambdas/api/composition.ts` — code, ~10 LoC — satisfies composition contract — blocks T4.6
+- [x] **T4.6** Run `pnpm --filter backend test create-category categories.routes` and confirm green — verification, 0 LoC
 - **Slice 4 total: ~215 LoC** (under 400).
 
 **Grand total: ~689 LoC** across 4 slices — chained PR is mandatory.
