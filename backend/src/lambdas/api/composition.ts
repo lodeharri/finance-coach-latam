@@ -1,5 +1,6 @@
 import { CategorizeTransactionUseCase } from '../../application/use-cases/categorize-transaction.use-case';
 import { CreateAccountUseCase } from '../../application/use-cases/create-account.use-case';
+import { CreateCategoryUseCase } from '../../application/use-cases/create-category.use-case';
 import { CreateTransactionUseCase } from '../../application/use-cases/create-transaction.use-case';
 import { CreateUserUseCase } from '../../application/use-cases/create-user.use-case';
 import { ListAccountsByUserUseCase } from '../../application/use-cases/list-accounts-by-user.use-case';
@@ -53,6 +54,7 @@ export function buildApiComposition() {
       accountTableRef,
     ),
     listCategoriesUseCase: new ListCategoriesUseCase(database, categoryTableRef),
+    createCategoryUseCase: new CreateCategoryUseCase(database, categoryTableRef, llm),
     createTransactionUseCase: new CreateTransactionUseCase(
       database,
       transactionTableRef,
