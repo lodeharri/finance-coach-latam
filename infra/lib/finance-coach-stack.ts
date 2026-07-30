@@ -164,6 +164,16 @@ export class FinanceCoachStack extends cdk.Stack {
       },
     });
 
+    // Override API Gateway's default throttling (10,000 RPS sustained /
+    // 5,000 burst) with a portfolio-appropriate limit. 100 RPS sustained
+    // with a 200 burst is more than enough for a demo API and protects
+    // downstream Lambdas from accidental traffic spikes.
+    const stage = httpApi.defaultStage?.node.defaultChild as apigwv2.CfnStage;
+    stage.defaultRouteSettings = {
+      throttlingBurstLimit: 200,
+      throttlingRateLimit: 100,
+    };
+
     const healthIntegration = new HttpLambdaIntegration('HealthIntegration', healthFunction);
     const publicAuthorizer = new apigwv2.HttpNoneAuthorizer();
 
