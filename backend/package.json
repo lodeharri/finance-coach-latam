@@ -1,0 +1,37 @@
+{
+  "name": "finance-coach-latam-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hexagonal backend for Finance Coach LATAM. Node 24 + TypeScript + esbuild + Drizzle + Neon HTTP.",
+  "type": "module",
+  "main": "dist/health/handler.js",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "build:health": "node esbuild.config.mjs --only=health",
+    "build:migration": "node esbuild.config.mjs --only=migration",
+    "typecheck": "tsc --noEmit",
+    "dev": "node esbuild.config.mjs --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.9.4",
+    "drizzle-orm": "^0.33.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.142",
+    "@types/node": "^24.0.0",
+    "@vitest/coverage-v8": "^2.0.0",
+    "drizzle-kit": "^0.24.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.4.0",
+    "vitest": "^2.0.0"
+  }
+}

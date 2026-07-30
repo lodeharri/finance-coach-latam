@@ -1,0 +1,6 @@
+{
+  "name": "finance-coach-latam-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Frontend placeholder for Finance Coach LATAM. Built in Phase 2 with React 18 + Vite + Tailwind + Atomic Design."
+}
