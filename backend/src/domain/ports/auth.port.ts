@@ -5,7 +5,3 @@ export interface VerifiedToken {
   readonly email: string;
   readonly role: UserRole;
 }
-
-export interface TokenVerifierPort {
-  verifyJwt(token: string): Promise<VerifiedToken>;
-}

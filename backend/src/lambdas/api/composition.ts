@@ -7,7 +7,6 @@ import { ListAccountsByUserUseCase } from '../../application/use-cases/list-acco
 import { ListCategoriesUseCase } from '../../application/use-cases/list-categories.use-case';
 import { ListTransactionsByUserUseCase } from '../../application/use-cases/list-transactions-by-user.use-case';
 import { ListUsersUseCase } from '../../application/use-cases/list-users.use-case';
-import { JwtVerifierAdapter } from '../../infrastructure/auth/jwt-verifier.adapter';
 import { CognitoIdentityAdapter } from '../../infrastructure/cognito/cognito-identity.adapter';
 import { getConfig } from '../../infrastructure/config/env.config';
 import {
@@ -40,12 +39,10 @@ export function buildApiComposition() {
   const database = new NeonDatabaseAdapter(config.databaseUrl);
   const llm = createLLMProvider(config.llm);
   const auth = new CognitoIdentityAdapter(config.cognito);
-  const tokenVerifier = new JwtVerifierAdapter(config.cognito);
   const queuePublisher = new SQSPublisherAdapter({ region: config.awsRegion });
   const merchantCache = new MerchantCacheAdapter(database);
 
   return createApiRoutes({
-    tokenVerifier,
     createUserUseCase: new CreateUserUseCase(database, auth, userTableRef),
     listUsersUseCase: new ListUsersUseCase(database, userTableRef),
     createAccountUseCase: new CreateAccountUseCase(database, accountTableRef),

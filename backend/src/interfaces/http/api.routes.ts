@@ -7,7 +7,6 @@ import type { ListAccountsByUserUseCase } from '../../application/use-cases/list
 import type { ListCategoriesUseCase } from '../../application/use-cases/list-categories.use-case';
 import type { ListTransactionsByUserUseCase } from '../../application/use-cases/list-transactions-by-user.use-case';
 import type { ListUsersUseCase } from '../../application/use-cases/list-users.use-case';
-import type { TokenVerifierPort } from '../../domain/ports/auth.port';
 import { createAccountsRoutes } from './accounts.routes';
 import { createCategoriesRoutes } from './categories.routes';
 import { jsonResponse, type HttpRouteHandler } from './http.utils';
@@ -15,7 +14,6 @@ import { createTransactionsRoutes } from './transactions.routes';
 import { createUsersRoutes } from './users.routes';
 
 export interface ApiRoutesDeps {
-  readonly tokenVerifier: TokenVerifierPort;
   readonly createUserUseCase: CreateUserUseCase;
   readonly listUsersUseCase: ListUsersUseCase;
   readonly createAccountUseCase: CreateAccountUseCase;
