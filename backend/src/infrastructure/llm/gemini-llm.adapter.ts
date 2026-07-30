@@ -23,8 +23,16 @@ export class GeminiLLMAdapter implements LLMPort {
   async generateText(prompt: string): Promise<string> {
     const response = await this.post<GenerateContentResponse>(
       'generateText',
-      'v1beta/models/gemini-2.0-flash:generateContent',
-      { contents: [{ parts: [{ text: prompt }] }] },
+      // gemini-flash-latest is the alias for the newest Flash model (3.6
+      // Flash). gemini-2.0-flash and gemini-2.0-flash-lite returned 429
+      // (FreeTier) on this project's API key. The `service_tier: 'flex'`
+      // request option selects Gemini's cheapest generation tier (higher
+      // latency, irrelevant for the async categorizer worker).
+      'v1beta/models/gemini-flash-latest:generateContent',
+      {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { service_tier: 'flex' },
+      },
     );
     const text = response.candidates?.[0]?.content?.parts
       ?.map((part) => part.text ?? '')
