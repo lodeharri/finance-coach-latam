@@ -1,16 +1,87 @@
-// Skeleton for swappability — actual Gemini API calls land in Phase 2 (categorizer-worker).
 import type { LLMPort } from '../../domain/ports/llm.port';
 
-export class GeminiLLMAdapter implements LLMPort {
-  constructor(private readonly apiKey: string) {}
+interface GenerateContentResponse {
+  readonly candidates?: Array<{
+    readonly content?: {
+      readonly parts?: Array<{ readonly text?: string }>;
+    };
+  }>;
+}
 
-  async generateText(_prompt: string): Promise<string> {
-    void this.apiKey;
-    throw new Error('GeminiLLMAdapter: not yet implemented — Phase 2');
+interface EmbedContentResponse {
+  readonly embedding?: { readonly values?: number[] };
+  readonly embeddings?: Array<{ readonly values?: number[] }>;
+}
+
+export class GeminiLLMAdapter implements LLMPort {
+  constructor(private readonly apiKey: string) {
+    if (!apiKey.trim()) {
+      throw new Error('GeminiLLMAdapter: apiKey is required');
+    }
   }
 
-  async embed(_text: string): Promise<number[]> {
-    void this.apiKey;
-    throw new Error('GeminiLLMAdapter: not yet implemented — Phase 2');
+  async generateText(prompt: string): Promise<string> {
+    const response = await this.post<GenerateContentResponse>(
+      'generateText',
+      'v1beta/models/gemini-2.0-flash:generateContent',
+      { contents: [{ parts: [{ text: prompt }] }] },
+    );
+    const text = response.candidates?.[0]?.content?.parts
+      ?.map((part) => part.text ?? '')
+      .join('')
+      .trim();
+    if (!text) {
+      throw new Error('GeminiLLMAdapter.generateText: response contained no text');
+    }
+    return text;
+  }
+
+  async embed(text: string): Promise<number[]> {
+    const response = await this.post<EmbedContentResponse>(
+      'embed',
+      'v1beta/models/gemini-embedding-001:embedContent',
+      { content: { parts: [{ text }] } },
+    );
+    const values = response.embedding?.values ?? response.embeddings?.[0]?.values;
+    if (!values || values.length === 0 || values.some((value) => !Number.isFinite(value))) {
+      throw new Error('GeminiLLMAdapter.embed: response contained no valid embedding');
+    }
+    return values;
+  }
+
+  private async post<T>(
+    operation: string,
+    path: string,
+    body: Record<string, unknown>,
+  ): Promise<T> {
+    const url = new URL(`https://generativelanguage.googleapis.com/${path}`);
+    url.searchParams.set('key', this.apiKey);
+
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(15_000),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`GeminiLLMAdapter.${operation}: request failed: ${message}`);
+    }
+
+    if (!response.ok) {
+      const detail = (await response.text()).trim().slice(0, 500);
+      throw new Error(
+        `GeminiLLMAdapter.${operation}: Gemini returned ${response.status} ${response.statusText}${detail ? `: ${detail}` : ''}`,
+      );
+    }
+
+    try {
+      return (await response.json()) as T;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`GeminiLLMAdapter.${operation}: invalid JSON response: ${message}`);
+    }
   }
 }

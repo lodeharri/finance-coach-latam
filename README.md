@@ -6,6 +6,19 @@ This is a **portfolio flagship** for a senior backend/cloud engineer. Built to d
 
 ---
 
+## 📋 Specification (OpenSpec)
+
+The full Spec-Driven Development artifacts live under [`openspec/changes/initial-poc/`](./openspec/changes/initial-poc/):
+
+- [`proposal.md`](./openspec/changes/initial-poc/proposal.md) — Problem, scope, success metrics, risks
+- [`spec.md`](./openspec/changes/initial-poc/spec.md) — Requirements with Given/When/Then scenarios (R1–R10)
+- [`design.md`](./openspec/changes/initial-poc/design.md) — Architecture diagram, components, ADRs (Hexagonal, Custom Resource, Drizzle, Gemini, RBAC)
+- [`tasks.md`](./openspec/changes/initial-poc/tasks.md) — Implementation tasks with `[x]` / `[ ]` checkboxes (62% complete)
+
+**Status:** Phases 1–4 complete (40/65 tasks). Phases 5–7 pending production validation, frontend, and CI/CD.
+
+---
+
 ## Folder Structure
 
 ```
@@ -49,8 +62,9 @@ backend/src/
 | IaC | AWS CDK v2 (TypeScript) |
 | Region | `us-east-1` |
 | Lambda | 512 MB / 10 s |
-| LLM (Phase 2) | Gemini 1.5 Flash + text-embedding-004 (free tier) |
-| Frontend hosting | Cloudflare Pages |
+| LLM | Gemini 2.0 Flash + text-embedding-004 (free tier) |
+| Auth | Amazon Cognito User Pool (2 roles: admin + user, JWT authorizer) |
+| Frontend hosting | Cloudflare Pages (Phase 6) |
 
 **Free tier only.** Zero ongoing cost in normal demo usage.
 
@@ -119,22 +133,25 @@ curl <API_URL>/health
 
 ## Phases Roadmap
 
-| Phase | Scope | Why |
-|---|---|---|
-| **Foundation (now)** | Health-check entity, 2 use cases, Lambda + Neon + Drizzle connectivity | Verify the production plumbing. Foundation code is not throwaway. |
-| **Phase 1** | Full domain — Transactions, Categories, Accounts, Users. REST CRUD. | Build the product skeleton on the health foundation. |
-| **Phase 2** | Cognito (2 roles: admin/user), EventBridge, SQS, categorizer worker with Gemini Flash + text-embedding-004, seed Lambda with 500 fake ARS/USD transactions. | Auth, async jobs, realistic data, and provider-backed categorization. |
-| **Phase 3** | Strict TDD coverage and semantic duplicate-detection workflows. | Harden the product and expand its core AI value. |
-| **Phase 4** | React frontend on Cloudflare Pages, CI/CD via GitHub OIDC. | Ship to users. |
+For current status see [tasks.md](./openspec/changes/initial-poc/tasks.md). Summary:
+
+- ✅ **Phase 1 — POC foundation** (13/13): hexagonal backend, health endpoint, CDK deploy
+- ✅ **Phase 2 — DB lifecycle** (7/7): Custom Resource for migrations + seed
+- ✅ **Phase 3 — GitHub repo** (6/6): public `lodeharri/finance-coach-latam`
+- ✅ **Phase 4 — Domain entities + auth** (14/14): User/Account/Category/Transaction + Cognito + Gemini
+- 🔜 **Phase 5 — Production validation** (0/9): deploy Phase 4, verify all spec scenarios end-to-end
+- 🔜 **Phase 6 — Frontend + polish** (0/11): React SPA, Cloudflare Pages, case-study.md, runbook.md
+- 🔜 **Phase 7 — CI/CD** (0/5): GitHub Actions with OIDC
 
 ---
 
 ## Architectural Discipline
 
 - **Hexagonal** means the domain is inviolable. Tomorrow's `PostgresLocalAdapter` or `DynamoDbAdapter` drops in without touching use cases.
-- **Composition root** (`main.ts`) is the ONLY file that knows concrete adapter types. Everything else depends on interfaces.
+- **Composition root** (`main.ts` and `lambdas/{name}/composition.ts`) is the ONLY place that wires concrete adapter types. Everything else depends on interfaces.
 - **No `process.env.X` outside `env.config.ts`.** All env access goes through the typed config object.
-- **No tests yet** — added in Phase 3 with strict TDD. The health endpoint currently validates infrastructure connectivity.
+- **CloudFormation Custom Resource** wires migrations into the deploy lifecycle — no manual `npm run db:migrate` ever.
+- **Tests** — 29 Vitest tests across 10 files (100% coverage on `src/application/use-cases/`). Run with `cd backend && npm test`.
 
 ---
 

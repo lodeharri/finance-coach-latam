@@ -13,6 +13,7 @@ describe('ListHealthChecksUseCase', () => {
     database = {
       insert: vi.fn(),
       select: vi.fn(),
+      update: vi.fn(),
     };
     tableRef = healthCheckTableRef;
     useCase = new ListHealthChecksUseCase(database, tableRef);

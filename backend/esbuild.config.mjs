@@ -8,13 +8,17 @@ const root = __dirname;
 
 const distDir = resolve(root, 'dist');
 const healthOutDir = resolve(root, 'dist/health');
+const apiOutDir = resolve(root, 'dist/api');
 const migrationOutDir = resolve(root, 'dist/migration');
+const categorizerOutDir = resolve(root, 'dist/categorizer');
 const drizzleSourceDir = resolve(root, 'drizzle');
 const drizzleDestDir = resolve(migrationOutDir, 'drizzle');
 
 await rm(distDir, { recursive: true, force: true });
 await mkdir(healthOutDir, { recursive: true });
+await mkdir(apiOutDir, { recursive: true });
 await mkdir(migrationOutDir, { recursive: true });
+await mkdir(categorizerOutDir, { recursive: true });
 
 const sharedOptions = {
   bundle: true,
@@ -32,10 +36,22 @@ const healthOptions = {
   outfile: resolve(healthOutDir, 'handler.js'),
 };
 
+const apiOptions = {
+  ...sharedOptions,
+  entryPoints: [resolve(root, 'src/lambdas/api/composition.ts')],
+  outfile: resolve(apiOutDir, 'handler.js'),
+};
+
 const migrationOptions = {
   ...sharedOptions,
   entryPoints: [resolve(root, 'src/lambdas/migration/composition.ts')],
   outfile: resolve(migrationOutDir, 'handler.js'),
+};
+
+const categorizerOptions = {
+  ...sharedOptions,
+  entryPoints: [resolve(root, 'src/lambdas/categorizer/composition.ts')],
+  outfile: resolve(categorizerOutDir, 'handler.js'),
 };
 
 try {
@@ -47,8 +63,12 @@ try {
   } else {
     await build(healthOptions);
     console.log(`Built: ${healthOutDir}/handler.js`);
+    await build(apiOptions);
+    console.log(`Built: ${apiOutDir}/handler.js`);
     await build(migrationOptions);
     console.log(`Built: ${migrationOutDir}/handler.js`);
+    await build(categorizerOptions);
+    console.log(`Built: ${categorizerOutDir}/handler.js`);
     await cp(drizzleSourceDir, drizzleDestDir, { recursive: true });
     console.log(`Copied migrations to: ${drizzleDestDir}`);
   }

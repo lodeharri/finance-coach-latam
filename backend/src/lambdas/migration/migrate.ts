@@ -21,7 +21,7 @@ export async function runMigrations(
     console.log(`[migrate] No prior migrations table (will be created). Reason: ${msg.slice(0, 120)}`);
   }
 
-  await migrate(db, { migrationsFolder });
+  await migrate(db, { migrationsFolder: folder });
 
   const after = await countMigrations(db);
   const applied = after - before;

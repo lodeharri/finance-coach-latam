@@ -22,8 +22,11 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.1098.0",
+    "@aws-sdk/client-sqs": "^3.1098.0",
     "@neondatabase/serverless": "^0.9.4",
-    "drizzle-orm": "^0.33.0"
+    "drizzle-orm": "^0.33.0",
+    "jose": "^6.2.5"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.142",

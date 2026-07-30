@@ -3,9 +3,13 @@ interface AppEnv {
   readonly LLM_PROVIDER?: string;
   readonly GEMINI_API_KEY?: string;
   readonly OPENAI_API_KEY?: string;
+  readonly COGNITO_USER_POOL_ID?: string;
+  readonly COGNITO_USER_POOL_CLIENT_ID?: string;
+  readonly COGNITO_REGION?: string;
   readonly AWS_REGION?: string;
   readonly NODE_ENV?: string;
   readonly LOG_LEVEL?: string;
+  readonly CATEGORIZER_QUEUE_URL?: string;
 }
 
 function readEnv(): AppEnv {
@@ -14,9 +18,13 @@ function readEnv(): AppEnv {
     LLM_PROVIDER: process.env.LLM_PROVIDER,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    COGNITO_USER_POOL_ID: process.env.COGNITO_USER_POOL_ID,
+    COGNITO_USER_POOL_CLIENT_ID: process.env.COGNITO_USER_POOL_CLIENT_ID,
+    COGNITO_REGION: process.env.COGNITO_REGION,
     AWS_REGION: process.env.AWS_REGION,
     NODE_ENV: process.env.NODE_ENV,
     LOG_LEVEL: process.env.LOG_LEVEL,
+    CATEGORIZER_QUEUE_URL: process.env.CATEGORIZER_QUEUE_URL,
   };
 }
 
@@ -26,9 +34,16 @@ export interface LLMProviderConfig {
   readonly openaiApiKey?: string;
 }
 
+export interface CognitoConfig {
+  readonly region: string;
+  readonly userPoolId: string;
+  readonly userPoolClientId: string;
+}
+
 export interface Config {
   readonly databaseUrl: string;
   readonly llm: LLMProviderConfig;
+  readonly cognito: CognitoConfig;
   readonly awsRegion: string;
   readonly nodeEnv: 'development' | 'production' | 'test';
   readonly logLevel: 'debug' | 'info' | 'warn' | 'error';
@@ -76,11 +91,17 @@ export function getConfig(): Config {
 
   const nodeEnv = (env.NODE_ENV ?? 'production') as Config['nodeEnv'];
   const logLevel = (env.LOG_LEVEL ?? 'info') as Config['logLevel'];
+  const awsRegion = env.AWS_REGION?.trim() || 'us-east-1';
 
   cached = Object.freeze({
     databaseUrl,
     llm: readLLMConfig(env),
-    awsRegion: env.AWS_REGION?.trim() || 'us-east-1',
+    cognito: Object.freeze({
+      region: env.COGNITO_REGION?.trim() || awsRegion,
+      userPoolId: env.COGNITO_USER_POOL_ID?.trim() || '',
+      userPoolClientId: env.COGNITO_USER_POOL_CLIENT_ID?.trim() || '',
+    }),
+    awsRegion,
     nodeEnv,
     logLevel,
   });

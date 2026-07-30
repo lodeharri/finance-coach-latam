@@ -1,8 +1,10 @@
 import type { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import { request as httpsRequest } from 'node:https';
 import { URL } from 'node:url';
+import type { LLMPort } from '../../domain/ports/llm.port';
 import { runMigrations, type MigrationsFolder } from './migrate';
 import { runSeed } from './seed';
+import type { CognitoDemoUsersBootstrap } from './cognito-bootstrap';
 
 export type RequestType = 'Create' | 'Update' | 'Delete';
 
@@ -22,6 +24,8 @@ export interface MigrationEvent {
 export interface MigrationHandlerDeps {
   db: NeonHttpDatabase;
   migrationsFolder: MigrationsFolder;
+  demoUsersBootstrap: CognitoDemoUsersBootstrap;
+  llm: LLMPort;
 }
 
 export type MigrationHandler = (event: MigrationEvent) => Promise<void>;
@@ -42,12 +46,18 @@ export function buildMigrationHandler(deps: MigrationHandlerDeps): MigrationHand
       }
 
       const applied = await runMigrations(deps.db, deps.migrationsFolder);
-      const seedInfo = await runSeed(deps.db);
+      const demoUsers = await deps.demoUsersBootstrap.ensureUsers();
+      const seedInfo = await runSeed(deps.db, demoUsers, deps.llm);
 
       await sendResponse(event, 'SUCCESS', physicalResourceId, undefined, {
         action: event.RequestType.toLowerCase(),
         migrationsApplied: applied,
         seedInserted: seedInfo.inserted,
+        seededUsers: seedInfo.users,
+        seededCategories: seedInfo.categories,
+        seededAccounts: seedInfo.accounts,
+        seededTransactions: seedInfo.transactions,
+        categoryEmbeddingsComputed: seedInfo.categoryEmbeddings,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

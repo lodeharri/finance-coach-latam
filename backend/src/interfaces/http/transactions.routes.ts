@@ -1,0 +1,96 @@
+import type { CategorizeTransactionUseCase } from '../../application/use-cases/categorize-transaction.use-case';
+import type { CreateTransactionUseCase } from '../../application/use-cases/create-transaction.use-case';
+import type { ListTransactionsByUserUseCase } from '../../application/use-cases/list-transactions-by-user.use-case';
+import type { TokenVerifierPort } from '../../domain/ports/auth.port';
+import {
+  authenticate,
+  HttpError,
+  jsonResponse,
+  parseBody,
+  requiredString,
+  routeError,
+  targetUserId,
+  type HttpRouteHandler,
+} from './http.utils';
+
+export interface TransactionsRoutesDeps {
+  readonly tokenVerifier: TokenVerifierPort;
+  readonly createTransactionUseCase: CreateTransactionUseCase;
+  readonly categorizeTransactionUseCase: CategorizeTransactionUseCase;
+  readonly listTransactionsByUserUseCase: ListTransactionsByUserUseCase;
+}
+
+export function createTransactionsRoutes(
+  deps: TransactionsRoutesDeps,
+): HttpRouteHandler {
+  return async (event) => {
+    try {
+      const actor = await authenticate(event, deps.tokenVerifier);
+      const method = event.requestContext.http.method;
+      const categorizeMatch = event.rawPath.match(
+        /^\/transactions\/([^/]+)\/categorize$/,
+      );
+
+      if (method === 'POST' && categorizeMatch) {
+        const body = parseBody(event);
+        const userId = targetUserId(actor, body.userId);
+        const transaction = await deps.categorizeTransactionUseCase.execute({
+          actor,
+          transactionId: decodeURIComponent(categorizeMatch[1]!),
+          userId,
+        });
+        return jsonResponse(200, transaction);
+      }
+
+      if (event.rawPath !== '/transactions') {
+        throw new HttpError(404, 'Transaction route not found');
+      }
+
+      if (method === 'GET') {
+        const userId = targetUserId(actor, event.queryStringParameters?.userId);
+        const rawLimit = event.queryStringParameters?.limit;
+        const limit = rawLimit === undefined ? undefined : Number(rawLimit);
+        if (limit !== undefined && (!Number.isInteger(limit) || limit < 1 || limit > 100)) {
+          throw new HttpError(400, 'limit must be an integer between 1 and 100');
+        }
+        const transactions = await deps.listTransactionsByUserUseCase.execute({
+          actor,
+          userId,
+          limit,
+        });
+        return jsonResponse(200, transactions);
+      }
+
+      if (method === 'POST') {
+        const body = parseBody(event);
+        const userId = targetUserId(actor, body.userId);
+        const amountCents = body.amountCents;
+        if (typeof amountCents !== 'number' || !Number.isInteger(amountCents)) {
+          throw new HttpError(400, 'Field "amountCents" must be an integer');
+        }
+        const occurredAt = new Date(requiredString(body, 'occurredAt'));
+        if (Number.isNaN(occurredAt.getTime())) {
+          throw new HttpError(400, 'Field "occurredAt" must be an ISO date');
+        }
+        const notes = body.notes;
+        if (notes !== undefined && typeof notes !== 'string') {
+          throw new HttpError(400, 'Field "notes" must be a string');
+        }
+        const transaction = await deps.createTransactionUseCase.execute({
+          actor,
+          userId,
+          accountId: requiredString(body, 'accountId'),
+          merchant: requiredString(body, 'merchant'),
+          amountCents,
+          occurredAt,
+          notes,
+        });
+        return jsonResponse(201, transaction);
+      }
+
+      throw new HttpError(405, `Method ${method} is not allowed on /transactions`);
+    } catch (error) {
+      return routeError(error);
+    }
+  };
+}

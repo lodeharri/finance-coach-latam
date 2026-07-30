@@ -8,6 +8,20 @@
       "when": 1785377617706,
       "tag": "0000_known_shaman",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785383479640,
+      "tag": "0001_youthful_salo",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785386986513,
+      "tag": "0002_eager_stellaris",
+      "breakpoints": true
     }
   ]
 }
