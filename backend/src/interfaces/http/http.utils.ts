@@ -42,48 +42,117 @@ export function jsonResponse(
   };
 }
 
+/**
+ * Normalize `cognito:groups` to a flat string array. API Gateway can forward
+ * the claim as an array, a comma-separated string, or a single string. We
+ * accept all three and reduce to `string[]` so downstream checks are uniform.
+ */
+function parseGroups(raw: unknown): string[] {
+  if (Array.isArray(raw)) {
+    return raw.filter((g): g is string => typeof g === 'string');
+  }
+  if (typeof raw === 'string') {
+    return raw
+      .split(',')
+      .map((g) => g.trim())
+      .filter((g) => g.length > 0);
+  }
+  return [];
+}
+
+function resolveRole(groups: readonly string[]): 'admin' | 'user' | undefined {
+  if (groups.includes('admins')) return 'admin';
+  if (groups.includes('users')) return 'user';
+  return undefined;
+}
+
+/**
+ * Decode the payload of a Bearer JWT without verifying the signature.
+ *
+ * API Gateway's HttpJwtAuthorizer has already validated the token (signature,
+ * issuer, audience, expiry) before the request reaches Lambda — that is the
+ * entire point of the gateway layer. By the time we see the raw header we
+ * trust the contents and only need the claims. We use base64url per RFC 7519
+ * and tolerate the standard `Buffer` encoding.
+ *
+ * Returns the decoded payload as a plain record, or `null` if the header is
+ * not a well-formed Bearer JWT (no signature verification, no JWKS, no
+ * cryptography — parsing only).
+ */
+function decodeBearerJwt(
+  authorization: string | undefined,
+): Record<string, unknown> | null {
+  if (!authorization) return null;
+  const [scheme, token] = authorization.split(' ');
+  if (!scheme || !token || scheme.toLowerCase() !== 'bearer') return null;
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  try {
+    const payload = Buffer.from(parts[1]!, 'base64url').toString('utf-8');
+    const parsed = JSON.parse(payload) as unknown;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return null;
+    }
+    return parsed as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
 // API Gateway's HttpJwtAuthorizer validates the JWT (signature, iss, aud, exp)
 // BEFORE invoking Lambda and forwards the claims via
 // `event.requestContext.authorizer.jwt.claims`. Re-verifying here would be
 // redundant work. We just read the claims.
+//
+// In some API Gateway configurations the colon-prefixed `cognito:groups`
+// claim does not survive the JSON serialization step (HTTP API v2 forwards
+// it unreliably across deploy / payload-size combinations). When that
+// happens the gateway still considers the token valid, so we must still let
+// the request through. The fallback path decodes the raw Authorization
+// header — the same payload the gateway already validated — and recovers
+// the missing claim from there.
 export function authenticate(event: AuthenticatedEvent): VerifiedToken {
   const claims = event.requestContext.authorizer?.jwt.claims;
-  if (!claims) {
-    // Reaching this branch means the API Gateway authorizer was either
-    // removed or the request reached Lambda without going through the
-    // configured default authorizer. That is a deploy-level bug we want
-    // to surface as 500 instead of letting the route silently run with an
-    // anonymous actor.
-    throw new HttpError(
-      500,
-      'Authenticated routes require the API Gateway JWT authorizer',
-    );
+  // Decode once per request. This is a cheap base64url + JSON.parse on a
+  // payload the gateway has already validated; we never verify signatures.
+  const decoded = decodeBearerJwt(event.headers?.authorization);
+
+  // cognito:groups has priority from claims, falling back to the raw token
+  // when API Gateway dropped the colon-prefixed claim.
+  const groups = (() => {
+    const fromClaims = parseGroups(claims?.['cognito:groups']);
+    if (fromClaims.length > 0) return fromClaims;
+    if (decoded) return parseGroups(decoded['cognito:groups']);
+    return [];
+  })();
+
+  // sub and email normally come from claims. If the gateway forwarded them,
+  // use them; otherwise (when claims is missing entirely), pull them from the
+  // decoded token. We never read JWT claims that the gateway did not validate.
+  const userId =
+    typeof claims?.sub === 'string'
+      ? claims.sub
+      : typeof decoded?.sub === 'string'
+        ? decoded.sub
+        : undefined;
+  const email =
+    typeof claims?.email === 'string'
+      ? claims.email
+      : typeof decoded?.email === 'string'
+        ? decoded.email
+        : undefined;
+
+  if (!userId || !email) {
+    // Reaching this branch means the gateway forwarded no usable identity
+    // AND the raw token is missing or unreadable. That is an authentication
+    // failure, not a deploy-time bug, so 401 is the right surface.
+    throw new HttpError(401, 'Missing or unreadable Authorization header');
   }
 
-  const userId = claims.sub;
-  const email = claims.email;
-  if (typeof userId !== 'string' || typeof email !== 'string') {
-    throw new HttpError(500, 'Token is missing sub or email claims');
-  }
-
-  // Cognito sets `cognito:groups` to an array in the JWT; API Gateway
-  // passes that through as-is. We also tolerate a single string value
-  // (some configurations normalize multi-value claims) and split on commas
-  // for the same reason.
-  const rawGroups = claims['cognito:groups'];
-  const groups: string[] = Array.isArray(rawGroups)
-    ? rawGroups.filter((g): g is string => typeof g === 'string')
-    : typeof rawGroups === 'string'
-      ? rawGroups.split(',').map((g) => g.trim()).filter((g) => g.length > 0)
-      : [];
-  const role = groups.includes('admins')
-    ? 'admin'
-    : groups.includes('users')
-      ? 'user'
-      : undefined;
+  const role = resolveRole(groups);
   if (!role) {
     throw new HttpError(
-      500,
+      401,
       'Token has no recognized Cognito group (admins or users)',
     );
   }

@@ -252,7 +252,11 @@ describe('POST /categories route handler', () => {
     expect((bodyOf(result) as { error: string }).error).toMatch(/color/);
   });
 
-  it('returns 500 when claims are missing (API Gateway authorizer was deactivated)', async () => {
+  it('returns 401 when claims are missing and no Authorization header is present (no identity can be recovered)', async () => {
+    // The route relies on `authenticate()` to derive a verified identity. When
+    // claims are not forwarded AND the raw header is absent, there is no token
+    // to decode and the request is unauthenticated → 401, not 500. A missing
+    // token is a client-side auth failure, not a deploy-time bug.
     const result = await handler(
       makeEvent(
         { slug: 'x', name: 'X', color: '#AABBCC' },
@@ -261,11 +265,14 @@ describe('POST /categories route handler', () => {
       ),
     );
 
-    expect(result.statusCode).toBe(500);
+    expect(result.statusCode).toBe(401);
     expect(createCategoryUseCase.execute).not.toHaveBeenCalled();
   });
 
-  it('returns 500 when cognito:groups claim is absent (token missing role group)', async () => {
+  it('returns 401 when cognito:groups claim is absent and no Authorization header is present', async () => {
+    // API Gateway may forward sub + email but not the colon-prefixed group
+    // claim (the production bug behind this test). With no raw header to
+    // decode either, the request is unauthenticated → 401.
     const result = await handler(
       makeEvent(
         { slug: 'x', name: 'X', color: '#AABBCC' },
@@ -277,7 +284,7 @@ describe('POST /categories route handler', () => {
       ),
     );
 
-    expect(result.statusCode).toBe(500);
+    expect(result.statusCode).toBe(401);
     expect(createCategoryUseCase.execute).not.toHaveBeenCalled();
   });
 });
