@@ -22,6 +22,13 @@
       "when": 1785386986513,
       "tag": "0002_eager_stellaris",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785431459847,
+      "tag": "0003_merchant_category_cache",
+      "breakpoints": true
     }
   ]
 }
