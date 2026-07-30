@@ -65,6 +65,14 @@ export const transactionTable = pgTable('transactions', {
   embedding: vector('embedding', { dimensions: 768 }),
 });
 
+export const merchantCategoryCacheTable = pgTable('merchant_category_cache', {
+  merchant: text('merchant').primaryKey(),
+  categoryId: uuid('category_id')
+    .notNull()
+    .references(() => categoryTable.id),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
 export type HealthCheckRow = typeof healthCheckTable.$inferSelect;
 export type HealthCheckInsert = typeof healthCheckTable.$inferInsert;
 export type UserRow = typeof userTable.$inferSelect;
@@ -75,6 +83,8 @@ export type CategoryRow = typeof categoryTable.$inferSelect;
 export type CategoryInsert = typeof categoryTable.$inferInsert;
 export type TransactionRow = typeof transactionTable.$inferSelect;
 export type TransactionInsert = typeof transactionTable.$inferInsert;
+export type MerchantCategoryCacheRow = typeof merchantCategoryCacheTable.$inferSelect;
+export type MerchantCategoryCacheInsert = typeof merchantCategoryCacheTable.$inferInsert;
 
 export const healthCheckTableRef = {
   __table: healthCheckTable,

@@ -15,6 +15,7 @@ import {
   transactionTableRef,
   userTableRef,
 } from '../../infrastructure/database/drizzle/schema';
+import { MerchantCacheAdapter } from '../../infrastructure/database/merchant-cache.adapter';
 import { NeonDatabaseAdapter } from '../../infrastructure/database/neon-database.adapter';
 import { createLLMProvider } from '../../infrastructure/llm/llm.factory';
 import { SQSPublisherAdapter } from '../../infrastructure/queue/sqs-publisher.adapter';
@@ -40,6 +41,10 @@ export function buildApiComposition() {
   const auth = new CognitoIdentityAdapter(config.cognito);
   const tokenVerifier = new JwtVerifierAdapter(config.cognito);
   const queuePublisher = new SQSPublisherAdapter({ region: config.awsRegion });
+  // Slice 3 will pass this into CategorizeTransactionUseCase. Instantiated now
+  // so the wiring change in Slice 3 stays a one-line use-case constructor edit.
+  const merchantCache = new MerchantCacheAdapter(database);
+  void merchantCache;
 
   return createApiRoutes({
     tokenVerifier,
