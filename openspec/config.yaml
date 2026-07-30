@@ -1,0 +1,61 @@
+schema: spec-driven
+
+context: |
+  Project: finance-coach-latam — personal finance assistant for LATAM users (portfolio flagship).
+  Stack: Node 24+, TypeScript 5.x, AWS CDK v2 (2.150+), serverless (Lambda + API Gateway HTTP API v2 + SQS + RDS/Neon Postgres + Cognito + pgvector).
+  Backend: backend/ — ESM, esbuild bundles (health, api, migration, categorizer), Vitest 2.x, drizzle-orm, drizzle-kit, hexagonal (domain/application/infrastructure/interfaces/lambdas).
+  Infra: infra/ — CDK TypeScript app, single stack FinanceCoachStack, region us-east-1.
+  Frontend: frontend/ — placeholder (Phase 6; React 18 + Vite + Tailwind planned).
+  LLM: Gemini 2.0 Flash + text-embedding-004 (free tier).
+  Free-tier cost discipline: $0/month in normal demo usage.
+  Style: hexagonal architecture, SOLID, strict TDD with Vitest use-case tests, conventional commits.
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Respect free-tier cost discipline (Neon 0.5 GB, Lambda 1M req/mo, API GW HTTP 1M/12mo)
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+    - Reference ADRs from openspec/changes/initial-poc/design.md when relevant
+  design:
+    - Include sequence diagrams for complex flows (especially SQS-based async embeddings)
+    - Document architecture decisions with rationale
+    - Preserve hexagonal dependency rules: domain → nothing; application → domain/ports only
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+    - Tests written first (RED), implementation second (GREEN), refactor third
+  apply:
+    guidelines:
+      - Follow existing hexagonal layering and composition-root pattern
+      - Never touch process.env outside env.config.ts (typed config only)
+      - Drizzle migrations only via CloudFormation Custom Resource in deploy path
+    tdd: true
+    test_command: "cd backend && npx vitest run"
+    coverage_command: "cd backend && npx vitest run --coverage"
+  verify:
+    test_command: "cd backend && npx vitest run"
+    build_command: "cd backend && npm run build && cd ../infra && npm run build"
+    coverage_threshold: 50
+  archive:
+    - Warn before merging destructive deltas
+    - Preserve retrospective artifacts under openspec/changes/initial-poc/
+
+testing:
+  strict_tdd: true
+  runner: vitest
+  runner_version: "2.x"
+  layers:
+    unit: true
+    integration: false
+    e2e: false
+  coverage:
+    provider: v8
+    command: "cd backend && npx vitest run --coverage"
+    thresholds:
+      use-cases:
+        lines: 50
+        functions: 50
+        statements: 50
+        branches: 50

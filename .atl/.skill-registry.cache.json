@@ -1,3 +1,9 @@
 {
-  "fingerprint": "6de597f863ed09860dfc9ca8864171e3d145fef5"
+  "project": "finance-coach-latam",
+  "fingerprint": "pending-regeneration",
+  "last_updated": "2026-07-30",
+  "sources_scanned": [
+    "/home/harri/.agents/skills",
+    "/home/harri/.config/opencode/skills"
+  ]
 }
