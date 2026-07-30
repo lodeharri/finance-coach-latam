@@ -40,7 +40,12 @@ export class GeminiLLMAdapter implements LLMPort {
     const response = await this.post<EmbedContentResponse>(
       'embed',
       'v1beta/models/gemini-embedding-001:embedContent',
-      { content: { parts: [{ text }] } },
+      {
+        content: { parts: [{ text }] },
+        // gemini-embedding-001 returns 3072 by default; the schema column is
+        // vector(768), so we request 768 explicitly.
+        output_dimensionality: 768,
+      },
     );
     const values = response.embedding?.values ?? response.embeddings?.[0]?.values;
     if (!values || values.length === 0 || values.some((value) => !Number.isFinite(value))) {
