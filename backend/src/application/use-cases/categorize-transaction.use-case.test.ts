@@ -43,6 +43,7 @@ describe('CategorizeTransactionUseCase', () => {
       insert: vi.fn(),
       select: vi.fn(),
       update: vi.fn(),
+      delete: vi.fn(),
       query: vi.fn(),
     };
     llm = {
@@ -534,6 +535,7 @@ describe('CategorizeTransactionUseCase', () => {
         insert: vi.fn(),
         select: vi.fn(),
         update: vi.fn(),
+        delete: vi.fn(),
         query: vi.fn(),
       };
       const localLlm: LLMPort = { generateText: vi.fn(), embed: vi.fn() };

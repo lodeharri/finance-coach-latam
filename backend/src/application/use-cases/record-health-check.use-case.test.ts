@@ -17,6 +17,7 @@ describe('RecordHealthCheckUseCase', () => {
       insert: vi.fn(),
       select: vi.fn(),
       update: vi.fn(),
+      delete: vi.fn(),
     };
     tableRef = healthCheckTableRef;
     useCase = new RecordHealthCheckUseCase(database, tableRef);

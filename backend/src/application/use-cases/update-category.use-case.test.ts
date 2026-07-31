@@ -34,6 +34,7 @@ describe('UpdateCategoryUseCase', () => {
       insert: vi.fn(),
       select: vi.fn(),
       update: vi.fn(),
+      delete: vi.fn(),
       query: vi.fn(),
     };
     llm = {

@@ -2,7 +2,9 @@ import type { APIGatewayProxyEventV2WithJWTAuthorizer } from 'aws-lambda';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createCategoriesRoutes } from './categories.routes';
 import type { CreateCategoryUseCase } from '../../application/use-cases/create-category.use-case';
+import type { DeleteCategoryUseCase } from '../../application/use-cases/delete-category.use-case';
 import type { ListCategoriesUseCase } from '../../application/use-cases/list-categories.use-case';
+import type { UpdateCategoryUseCase } from '../../application/use-cases/update-category.use-case';
 
 // Convenience shape for the subset of Cognito claims this module cares
 // about. Tests use `Partial` to exercise the "missing claim" branches.
@@ -14,13 +16,14 @@ type AuthorizerClaims = {
 
 function makeEvent(
   body: Record<string, unknown> | string | null,
-  method: 'GET' | 'POST' = 'POST',
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE' = 'POST',
   claims: Partial<AuthorizerClaims> = {},
+  path = '/categories',
 ): APIGatewayProxyEventV2WithJWTAuthorizer {
   return {
     version: '2.0',
     routeKey: '$default',
-    rawPath: '/categories',
+    rawPath: path,
     rawQueryString: '',
     headers: {},
     requestContext: {
@@ -30,7 +33,7 @@ function makeEvent(
       domainPrefix: 'api',
       http: {
         method,
-        path: '/categories',
+        path,
         protocol: 'HTTP/1.1',
         sourceIp: '127.0.0.1',
         userAgent: 'vitest',
@@ -77,9 +80,20 @@ const insertedCategory = {
   color: '#1E40AF',
 };
 
+const updatedCategory = {
+  ...insertedCategory,
+  name: 'Transporte público',
+};
+
+const adminActor = { userId: 'admin-1', email: 'admin@example.com', role: 'admin' as const };
+const categoryId = '50000000-0000-4000-8000-000000000001';
+const categoryPath = `/categories/${categoryId}`;
+
 describe('POST /categories route handler', () => {
   let listCategoriesUseCase: ListCategoriesUseCase;
   let createCategoryUseCase: CreateCategoryUseCase;
+  let updateCategoryUseCase: UpdateCategoryUseCase;
+  let deleteCategoryUseCase: DeleteCategoryUseCase;
   let handler: ReturnType<typeof createCategoriesRoutes>;
 
   beforeEach(() => {
@@ -98,9 +112,29 @@ describe('POST /categories route handler', () => {
         return Promise.resolve(insertedCategory);
       }),
     } as unknown as CreateCategoryUseCase;
+    // The PATCH/DELETE mock mirrors the same admin-gate so the route
+    // surfaces a 403 for non-admin actors without invoking real use cases.
+    updateCategoryUseCase = {
+      execute: vi.fn().mockImplementation(({ actor }) => {
+        if (actor.role !== 'admin') {
+          throw new Error('Forbidden: admin role required');
+        }
+        return Promise.resolve(updatedCategory);
+      }),
+    } as unknown as UpdateCategoryUseCase;
+    deleteCategoryUseCase = {
+      execute: vi.fn().mockImplementation(({ actor }) => {
+        if (actor.role !== 'admin') {
+          throw new Error('Forbidden: admin role required');
+        }
+        return Promise.resolve(undefined);
+      }),
+    } as unknown as DeleteCategoryUseCase;
     handler = createCategoriesRoutes({
       listCategoriesUseCase,
       createCategoryUseCase,
+      updateCategoryUseCase,
+      deleteCategoryUseCase,
     });
   });
 
@@ -130,7 +164,7 @@ describe('POST /categories route handler', () => {
     expect(result.statusCode).toBe(201);
     expect(bodyOf(result)).toEqual(insertedCategory);
     expect(createCategoryUseCase.execute).toHaveBeenCalledWith({
-      actor: { userId: 'admin-1', email: 'admin@example.com', role: 'admin' },
+      actor: adminActor,
       slug: insertedCategory.slug,
       name: insertedCategory.name,
       color: insertedCategory.color,
@@ -286,5 +320,142 @@ describe('POST /categories route handler', () => {
 
     expect(result.statusCode).toBe(401);
     expect(createCategoryUseCase.execute).not.toHaveBeenCalled();
+  });
+});
+
+describe('PATCH /categories/{id} route handler', () => {
+  let listCategoriesUseCase: ListCategoriesUseCase;
+  let createCategoryUseCase: CreateCategoryUseCase;
+  let updateCategoryUseCase: UpdateCategoryUseCase;
+  let deleteCategoryUseCase: DeleteCategoryUseCase;
+  let handler: ReturnType<typeof createCategoriesRoutes>;
+
+  beforeEach(() => {
+    listCategoriesUseCase = { execute: vi.fn() } as unknown as ListCategoriesUseCase;
+    createCategoryUseCase = { execute: vi.fn() } as unknown as CreateCategoryUseCase;
+    updateCategoryUseCase = {
+      execute: vi.fn().mockImplementation(({ actor }) => {
+        if (actor.role !== 'admin') {
+          throw new Error('Forbidden: admin role required');
+        }
+        return Promise.resolve(updatedCategory);
+      }),
+    } as unknown as UpdateCategoryUseCase;
+    deleteCategoryUseCase = { execute: vi.fn() } as unknown as DeleteCategoryUseCase;
+    handler = createCategoriesRoutes({
+      listCategoriesUseCase,
+      createCategoryUseCase,
+      updateCategoryUseCase,
+      deleteCategoryUseCase,
+    });
+  });
+
+  it('PATCH /categories/{id} admin + name returns 200 with the updated row', async () => {
+    const result = await handler(
+      makeEvent({ name: 'Transporte público' }, 'PATCH', adminClaims, categoryPath),
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(bodyOf(result)).toEqual(updatedCategory);
+    expect(updateCategoryUseCase.execute).toHaveBeenCalledWith({
+      actor: adminActor,
+      id: categoryId,
+      patch: { name: 'Transporte público' },
+    });
+  });
+
+  it('PATCH /categories/{id} non-admin returns 403', async () => {
+    const result = await handler(
+      makeEvent({ name: 'X' }, 'PATCH', userClaims, categoryPath),
+    );
+
+    expect(result.statusCode).toBe(403);
+    expect(bodyOf(result)).toEqual({ error: 'Forbidden: admin role required' });
+  });
+
+  it('PATCH /categories/{id} with empty body returns 400 and skips the use case', async () => {
+    const result = await handler(
+      makeEvent({}, 'PATCH', adminClaims, categoryPath),
+    );
+
+    expect(result.statusCode).toBe(400);
+    expect(bodyOf(result)).toEqual({
+      error: 'At least one of "name" or "color" is required',
+    });
+    expect(updateCategoryUseCase.execute).not.toHaveBeenCalled();
+  });
+
+  it('PATCH /categories/{id} with an invalid hex color returns 400', async () => {
+    const result = await handler(
+      makeEvent({ color: 'red' }, 'PATCH', adminClaims, categoryPath),
+    );
+
+    expect(result.statusCode).toBe(400);
+    expect((bodyOf(result) as { error: string }).error).toMatch(/color/);
+    expect(updateCategoryUseCase.execute).not.toHaveBeenCalled();
+  });
+});
+
+describe('DELETE /categories/{id} route handler', () => {
+  let listCategoriesUseCase: ListCategoriesUseCase;
+  let createCategoryUseCase: CreateCategoryUseCase;
+  let updateCategoryUseCase: UpdateCategoryUseCase;
+  let deleteCategoryUseCase: DeleteCategoryUseCase;
+  let handler: ReturnType<typeof createCategoriesRoutes>;
+
+  beforeEach(() => {
+    listCategoriesUseCase = { execute: vi.fn() } as unknown as ListCategoriesUseCase;
+    createCategoryUseCase = { execute: vi.fn() } as unknown as CreateCategoryUseCase;
+    updateCategoryUseCase = { execute: vi.fn() } as unknown as UpdateCategoryUseCase;
+    deleteCategoryUseCase = {
+      execute: vi.fn().mockImplementation(({ actor }) => {
+        if (actor.role !== 'admin') {
+          throw new Error('Forbidden: admin role required');
+        }
+        return Promise.resolve(undefined);
+      }),
+    } as unknown as DeleteCategoryUseCase;
+    handler = createCategoriesRoutes({
+      listCategoriesUseCase,
+      createCategoryUseCase,
+      updateCategoryUseCase,
+      deleteCategoryUseCase,
+    });
+  });
+
+  it('DELETE /categories/{id} admin returns 204', async () => {
+    const result = await handler(
+      makeEvent(null, 'DELETE', adminClaims, categoryPath),
+    );
+
+    expect(result.statusCode).toBe(204);
+    expect(deleteCategoryUseCase.execute).toHaveBeenCalledWith({
+      actor: adminActor,
+      id: categoryId,
+    });
+  });
+
+  it('DELETE /categories/{id} non-admin returns 403', async () => {
+    const result = await handler(
+      makeEvent(null, 'DELETE', userClaims, categoryPath),
+    );
+
+    expect(result.statusCode).toBe(403);
+    expect(bodyOf(result)).toEqual({ error: 'Forbidden: admin role required' });
+  });
+
+  it('DELETE /categories/{id} returns 409 when the use case reports an FK conflict', async () => {
+    vi.mocked(deleteCategoryUseCase.execute).mockRejectedValueOnce(
+      new Error('Category in use by transactions'),
+    );
+
+    const result = await handler(
+      makeEvent(null, 'DELETE', adminClaims, categoryPath),
+    );
+
+    expect(result.statusCode).toBe(409);
+    expect(bodyOf(result)).toEqual({
+      error: 'Category in use by transactions',
+    });
   });
 });

@@ -93,6 +93,24 @@ export class NeonDatabaseAdapter implements DatabasePort {
     return row as unknown as TEntity;
   }
 
+  async delete<TEntity>(
+    table: TableRef<TEntity>,
+    where: Partial<TEntity>,
+  ): Promise<void> {
+    const pgTable = this.resolveTable(table);
+    const conditions = this.buildConditions(pgTable, where);
+
+    if (conditions.length === 0) {
+      // Mirrors `update`: an empty `where` would generate `DELETE FROM x`
+      // (no WHERE clause), which mass-deletes the table. Reject it at the
+      // adapter boundary so call sites cannot accidentally trample data
+      // (REQ-AC-007).
+      throw new Error('NeonDatabaseAdapter.delete: at least one filter is required');
+    }
+
+    await this.db.delete(pgTable).where(and(...conditions));
+  }
+
   private buildConditions<TEntity>(
     table: PgTable,
     where: Partial<TEntity> | undefined,

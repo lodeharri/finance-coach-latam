@@ -13,6 +13,7 @@ describe('ListCategoriesUseCase', () => {
       insert: vi.fn(),
       select: vi.fn(),
       update: vi.fn(),
+      delete: vi.fn(),
     };
     useCase = new ListCategoriesUseCase(database, categoryTableRef);
   });
