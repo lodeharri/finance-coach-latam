@@ -1,0 +1,130 @@
+name: npm audit (weekly)
+
+on:
+  schedule:
+    # Weekly on Monday at 06:00 UTC
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: npm-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: backend npm audit
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit (JSON)
+        id: audit
+        run: |
+          npm audit --json --audit-level=moderate > audit.json || true
+          # Parse vulnerabilities count
+          VULN_COUNT=$(node -e "
+            const a = require('./audit.json');
+            const meta = a.metadata && a.metadata.vulnerabilities;
+            const total = meta ? (meta.critical + meta.high + meta.moderate) : 0;
+            console.log(total);
+          ")
+          echo "vuln_count=$VULN_COUNT" >> "$GITHUB_OUTPUT"
+          echo "Total vulnerabilities ≥ moderate: $VULN_COUNT"
+
+      - name: Upload audit artifact
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: npm-audit-report
+          path: backend/audit.json
+          retention-days: 30
+
+      - name: Open issue if vulnerabilities found
+        if: steps.audit.outputs.vuln_count > 0
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const audit = JSON.parse(fs.readFileSync('backend/audit.json', 'utf8'));
+            const meta = audit.metadata.vulnerabilities || {};
+            const vulns = audit.vulnerabilities || {};
+
+            // Build a summary of unique packages affected
+            const lines = [];
+            lines.push(`## npm audit results`);
+            lines.push(``);
+            lines.push(`Run triggered: ${context.eventName}`);
+            lines.push(`Commit: ${context.sha}`);
+            lines.push(`Run URL: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`);
+            lines.push(``);
+            lines.push(`### Summary`);
+            lines.push(`| Severity | Count |`);
+            lines.push(`|---|---|`);
+            lines.push(`| Critical | ${meta.critical || 0} |`);
+            lines.push(`| High | ${meta.high || 0} |`);
+            lines.push(`| Moderate | ${meta.moderate || 0} |`);
+            lines.push(``);
+
+            // List unique packages
+            const seen = new Set();
+            const pkgList = [];
+            for (const [name, advisoryList] of Object.entries(vulns)) {
+              if (seen.has(name)) continue;
+              seen.add(name);
+              const adv = advisoryList[0];
+              pkgList.push(`- **${name}** — ${adv.severity} — via ${adv.via.slice(0, 3).join(', ')}${adv.via.length > 3 ? '...' : ''}`);
+            }
+            if (pkgList.length > 0) {
+              lines.push(`### Packages affected`);
+              pkgList.forEach(l => lines.push(l));
+              lines.push(``);
+            }
+
+            lines.push(`### Reproduction`);
+            lines.push(`\`\`\`bash`);
+            lines.push(`cd backend && npm audit --audit-level=moderate`);
+            lines.push(`\`\`\``);
+            lines.push(``);
+            lines.push(`See full JSON report in the workflow run artifacts.`);
+
+            const body = lines.join('\n');
+            const title = `npm audit: ${(meta.critical || 0) + (meta.high || 0) + (meta.moderate || 0)} vulnerabilities found (≥ moderate)`;
+
+            // Check if there's already an open issue with the same title to avoid spam
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'security,npm-audit',
+            });
+            const dup = existing.data.find(i => i.title === title);
+            if (dup) {
+              core.info(`Issue #${dup.number} already open with same title — skipping`);
+              return;
+            }
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['security', 'npm-audit'],
+            });
