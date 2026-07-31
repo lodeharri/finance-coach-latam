@@ -2,6 +2,20 @@
 
 > Layered chained PRs (scaffold → atoms/molecules → organisms/auth → pages → polish). Strict TDD: every UI task has a paired `[T]` test first, then `[I]` implementation. `frontend-design` skill is re-read at the start of every PR that touches UI.
 
+## TDD policy update (applied 2026-07-31)
+
+User-mandated TDD policy replaces the per-component colocated-test default. It applies from PR2 onward and MUST be carried forward to PR3, PR4, and PR5.
+
+- **Strict colocated `*.test.tsx`** per component (still mandatory):
+  - All organisms, hooks, state, business logic.
+  - `FormField` (validation, error mapping, label association).
+  - `Toast` (ARIA live regions, focus management, auto-dismiss).
+  - Any atom with real behavior: `Button` (variants, disabled, onClick), `Input` (types, controlled/uncontrolled), `HexStamp` (signature element with specific visual behavior).
+- **Relaxed TDD — shared `atoms.trivial.test.tsx`** for pure presentational atoms with no state and minimal/no callbacks beyond `onClick`. As of PR2 these are: `Label`, `Badge`, `Spinner`. They share ONE test file. Each component still gets tested, just not in a colocated file.
+- Apply this same relaxation to any future pure presentational atom or molecule with no logic.
+
+Forecast line counts in the `Per-slice forecast` row below are stale; PR2 will land at ~1116 lines (vs the original 370 forecast) because of strict TDD on atoms + molecules. PR1 already received a `size:exception`. PR3+, if they approach >800 lines after applying the policy, must split per design.md triggers (`PR3a`/`PR3b`, `PR4a`/`PR4b`).
+
 ## Review Workload Forecast
 
 | Field | Value |
