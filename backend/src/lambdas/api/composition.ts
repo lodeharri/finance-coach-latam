@@ -3,10 +3,12 @@ import { CreateAccountUseCase } from '../../application/use-cases/create-account
 import { CreateCategoryUseCase } from '../../application/use-cases/create-category.use-case';
 import { CreateTransactionUseCase } from '../../application/use-cases/create-transaction.use-case';
 import { CreateUserUseCase } from '../../application/use-cases/create-user.use-case';
+import { DeleteCategoryUseCase } from '../../application/use-cases/delete-category.use-case';
 import { ListAccountsByUserUseCase } from '../../application/use-cases/list-accounts-by-user.use-case';
 import { ListCategoriesUseCase } from '../../application/use-cases/list-categories.use-case';
 import { ListTransactionsByUserUseCase } from '../../application/use-cases/list-transactions-by-user.use-case';
 import { ListUsersUseCase } from '../../application/use-cases/list-users.use-case';
+import { UpdateCategoryUseCase } from '../../application/use-cases/update-category.use-case';
 import { CognitoIdentityAdapter } from '../../infrastructure/cognito/cognito-identity.adapter';
 import { getConfig } from '../../infrastructure/config/env.config';
 import {
@@ -52,6 +54,17 @@ export function buildApiComposition() {
     ),
     listCategoriesUseCase: new ListCategoriesUseCase(database, categoryTableRef),
     createCategoryUseCase: new CreateCategoryUseCase(database, categoryTableRef, llm),
+    updateCategoryUseCase: new UpdateCategoryUseCase(
+      database,
+      categoryTableRef,
+      llm,
+      merchantCache,
+    ),
+    deleteCategoryUseCase: new DeleteCategoryUseCase(
+      database,
+      categoryTableRef,
+      merchantCache,
+    ),
     createTransactionUseCase: new CreateTransactionUseCase(
       database,
       transactionTableRef,

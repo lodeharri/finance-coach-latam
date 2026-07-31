@@ -46,6 +46,18 @@ export interface DatabasePort {
   ): Promise<TEntity>;
 
   /**
+   * Delete rows matched by `where`. Mirrors `update`: callers MUST pass at
+   * least one filter so the adapter can reject accidental mass deletes.
+   * The adapter throws when `where` is empty (no condition means "delete
+   * everything", which is never what an admin endpoint wants) — this is
+   * the same defensive posture as `update` (REQ-AC-007).
+   */
+  delete<TEntity>(
+    table: TableRef<TEntity>,
+    where: Partial<TEntity>,
+  ): Promise<void>;
+
+  /**
    * Raw parameterized SQL escape hatch. Adapters that support it must implement
    * this method; use cases that need capabilities outside the generic
    * insert/select/update (e.g. pgvector similarity search) reach for this.
