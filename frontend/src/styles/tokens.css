@@ -1,0 +1,62 @@
+/**
+ * Litografía del Sur — Design tokens
+ *
+ * Source of truth: openspec/changes/frontend-foundation/design.md §1.4.
+ *
+ * Aesthetic: 1960s–70s Latin American editorial design — cobalt brand on warm
+ * paper, tabular lining figures, hand-kept ledger numbering. NEVER one of the
+ * three AI defaults (cream + terracotta, near-black + acid-green, broadsheet
+ * hairline rules).
+ */
+
+:root {
+  /* Surfaces — paper */
+  --ink-paper: #f5f0e2;
+  --ink-paper-lift: #faf6ea;
+  --ink-paper-press: #e8e1cf;
+
+  /* Inks — text */
+  --ink-tinta: #1b1f26;
+  --ink-tinta-soft: #4a4f5a;
+  --ink-tinta-mute: #8a8678;
+
+  /* Brand — single color, used sparingly */
+  --ink-cobalto: #1f3fb8;
+  --ink-cobalto-deep: #162d85;
+
+  /* Signals — named, never the brand */
+  --ink-positivo: #1f4d2c;
+  --ink-negativo: #b8421a;
+  --ink-fallo: #6e1f1f;
+  --ink-alerta: #c58a14;
+
+  /* Spacing scale (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* Motion */
+  --motion-fast: 120ms ease-out;
+  --motion-entrance: 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Type scale */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.75rem;
+  --text-2xl: 2.5rem;
+  --text-3xl: 4rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms linear;
+    --motion-entrance: 0ms linear;
+  }
+}

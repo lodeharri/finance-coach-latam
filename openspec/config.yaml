@@ -33,9 +33,11 @@ rules:
       - Drizzle migrations only via CloudFormation Custom Resource in deploy path
     tdd: true
     test_command: "cd backend && npx vitest run"
+    test_command_frontend: "cd frontend && npm test"
     coverage_command: "cd backend && npx vitest run --coverage"
   verify:
     test_command: "cd backend && npx vitest run"
+    test_command_frontend: "cd frontend && npm test"
     build_command: "cd backend && npm run build && cd ../infra && npm run build"
     coverage_threshold: 50
   archive:
