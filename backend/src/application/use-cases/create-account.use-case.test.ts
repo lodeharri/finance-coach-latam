@@ -22,6 +22,7 @@ describe('CreateAccountUseCase', () => {
       insert: vi.fn(),
       select: vi.fn(),
       update: vi.fn(),
+      delete: vi.fn(),
     };
     useCase = new CreateAccountUseCase(database, accountTableRef);
   });

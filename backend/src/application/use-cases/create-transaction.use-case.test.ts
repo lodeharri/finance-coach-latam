@@ -47,6 +47,7 @@ describe('CreateTransactionUseCase', () => {
       insert: vi.fn(),
       select: vi.fn(),
       update: vi.fn(),
+      delete: vi.fn(),
     };
     queuePublisher = {
       publish: vi.fn().mockResolvedValue(undefined),

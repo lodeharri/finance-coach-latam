@@ -11,6 +11,7 @@ describe('MerchantCacheAdapter', () => {
       insert: vi.fn(),
       select: vi.fn(),
       update: vi.fn(),
+      delete: vi.fn(),
       query: vi.fn(),
     };
     adapter = new MerchantCacheAdapter(database);
