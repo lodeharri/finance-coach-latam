@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write   # required for OIDC
 
 concurrency:
   group: deploy-staging-${{ github.ref }}
@@ -26,11 +27,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials (access keys)
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsRole-FinanceCoach
           aws-region: ${{ secrets.AWS_REGION }}
 
       - uses: actions/setup-node@v4
