@@ -52,6 +52,7 @@ describe('CategorizeTransactionUseCase', () => {
     merchantCache = {
       findByMerchant: vi.fn(),
       save: vi.fn(),
+      invalidateByCategoryId: vi.fn(),
     };
     useCase = new CategorizeTransactionUseCase(
       database,
@@ -536,7 +537,7 @@ describe('CategorizeTransactionUseCase', () => {
         query: vi.fn(),
       };
       const localLlm: LLMPort = { generateText: vi.fn(), embed: vi.fn() };
-      const localCache: MerchantCachePort = { findByMerchant: vi.fn(), save: vi.fn() };
+      const localCache: MerchantCachePort = { findByMerchant: vi.fn(), save: vi.fn(), invalidateByCategoryId: vi.fn() };
       const localUseCase = new CategorizeTransactionUseCase(
         localDatabase,
         localLlm,

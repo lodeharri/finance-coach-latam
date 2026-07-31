@@ -76,4 +76,58 @@ describe('MerchantCacheAdapter', () => {
       expect(database.query).toHaveBeenCalledTimes(2);
     });
   });
+
+  describe('invalidateByCategoryId', () => {
+    it('issues a DELETE statement scoped to the given category_id', async () => {
+      vi.mocked(database.query).mockResolvedValueOnce([]);
+
+      await adapter.invalidateByCategoryId('50000000-0000-4000-8000-000000000099');
+
+      expect(database.query).toHaveBeenCalledTimes(1);
+      expect(database.query).toHaveBeenCalledWith(
+        expect.stringContaining('DELETE FROM merchant_category_cache'),
+        ['50000000-0000-4000-8000-000000000099'],
+      );
+      expect(database.query).toHaveBeenCalledWith(
+        expect.stringContaining('WHERE category_id = $1'),
+        ['50000000-0000-4000-8000-000000000099'],
+      );
+    });
+
+    it('is a no-op when no rows match the category_id (adapter resolves, never throws)', async () => {
+      vi.mocked(database.query).mockResolvedValueOnce([]);
+
+      await expect(
+        adapter.invalidateByCategoryId('50000000-0000-4000-8000-000000000000'),
+      ).resolves.toBeUndefined();
+    });
+
+    it('is idempotent — calling invalidate twice for the same id issues two DELETE statements', async () => {
+      vi.mocked(database.query).mockResolvedValue([]);
+
+      await adapter.invalidateByCategoryId('50000000-0000-4000-8000-000000000042');
+      await adapter.invalidateByCategoryId('50000000-0000-4000-8000-000000000042');
+
+      expect(database.query).toHaveBeenCalledTimes(2);
+      expect(database.query).toHaveBeenNthCalledWith(
+        1,
+        expect.stringContaining('DELETE FROM merchant_category_cache'),
+        ['50000000-0000-4000-8000-000000000042'],
+      );
+      expect(database.query).toHaveBeenNthCalledWith(
+        2,
+        expect.stringContaining('DELETE FROM merchant_category_cache'),
+        ['50000000-0000-4000-8000-000000000042'],
+      );
+    });
+
+    it('propagates raw-query errors so callers (e.g. UpdateCategoryUseCase) can react', async () => {
+      const dbError = new Error('connection terminated');
+      vi.mocked(database.query).mockRejectedValueOnce(dbError);
+
+      await expect(
+        adapter.invalidateByCategoryId('50000000-0000-4000-8000-000000000007'),
+      ).rejects.toThrow('connection terminated');
+    });
+  });
 });
