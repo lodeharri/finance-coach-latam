@@ -159,7 +159,12 @@ export class FinanceCoachStack extends cdk.Stack {
       defaultAuthorizer: cognitoAuthorizer,
       corsPreflight: {
         allowOrigins: ['*'],
-        allowMethods: [apigwv2.CorsHttpMethod.GET, apigwv2.CorsHttpMethod.POST],
+        allowMethods: [
+          apigwv2.CorsHttpMethod.GET,
+          apigwv2.CorsHttpMethod.POST,
+          apigwv2.CorsHttpMethod.PATCH,
+          apigwv2.CorsHttpMethod.DELETE,
+        ],
         allowHeaders: ['Content-Type', 'Authorization'],
       },
     });
@@ -206,6 +211,11 @@ export class FinanceCoachStack extends cdk.Stack {
     httpApi.addRoutes({
       path: '/categories',
       methods: [apigwv2.HttpMethod.GET, apigwv2.HttpMethod.POST],
+      integration: apiIntegration,
+    });
+    httpApi.addRoutes({
+      path: '/categories/{id}',
+      methods: [apigwv2.HttpMethod.PATCH, apigwv2.HttpMethod.DELETE],
       integration: apiIntegration,
     });
     httpApi.addRoutes({
