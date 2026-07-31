@@ -89,8 +89,15 @@ jobs:
             for (const [name, adv] of Object.entries(vulns)) {
               if (seen.has(name)) continue;
               seen.add(name);
+              // via can be array of strings (parent package names, for transitive) OR
+              // array of advisory objects (for the root vulnerable package).
               const viaArr = Array.isArray(adv.via) ? adv.via : [];
-              pkgList.push(`- **${name}** — ${adv.severity} — via ${viaArr.slice(0, 3).join(', ')}${viaArr.length > 3 ? '...' : ''}`);
+              const viaLabels = viaArr.map(v => {
+                if (typeof v === 'string') return v;
+                if (typeof v === 'object' && v !== null && v.title) return v.title;
+                return String(v);
+              });
+              pkgList.push(`- **${name}** — ${adv.severity} — via ${viaLabels.slice(0, 3).join(', ')}${viaLabels.length > 3 ? '...' : ''}`);
             }
             if (pkgList.length > 0) {
               lines.push(`### Packages affected`);
