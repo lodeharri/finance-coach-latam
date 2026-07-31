@@ -61,9 +61,15 @@ jobs:
             --require-approval never \
             --outputs-file /tmp/cdk-outputs.json
 
+      - name: Export CDK outputs to step outputs
+        id: outputs
+        run: |
+          API_URL=$(jq -r '.FinanceCoachStack.FinanceCoachApiUrl' /tmp/cdk-outputs.json)
+          echo "api_url=${API_URL}" >> "$GITHUB_OUTPUT"
+
       - name: Smoke test (health + endpoint presence)
         env:
-          API_URL: ${{ steps.cdk.outputs.FinanceCoachApiUrl }}
+          API_URL: ${{ steps.outputs.outputs.api_url }}
         run: |
           echo "Health check..."
           HTTP=$(curl -s -o /tmp/health.json -w "%{http_code}" "$API_URL/health")
