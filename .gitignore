@@ -48,3 +48,6 @@ backend/dist/
 .cache/
 .tmp/
 tmp/
+
+### Tooling internals (local-only) ###
+.atl/review-snapshots/
