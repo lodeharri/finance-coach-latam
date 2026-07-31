@@ -21,7 +21,22 @@ export default defineConfig({
       reporter: ['text', 'html'],
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/**/*.{test,spec}.{ts,tsx}', 'src/test/**', 'src/main.tsx'],
-      // Layered thresholds land in later PRs (PR2 = atoms/molecules 80; PR4 = templates/pages 70; PR5 = global 50).
+      // Per-glob thresholds: atoms + molecules must stay >= 80% lines.
+      // Templates/pages thresholds land in PR4; global thresholds land in PR5.
+      thresholds: {
+        'src/atoms/**': {
+          lines: 80,
+          functions: 80,
+          statements: 80,
+          branches: 70,
+        },
+        'src/molecules/**': {
+          lines: 80,
+          functions: 80,
+          statements: 80,
+          branches: 70,
+        },
+      },
     },
   },
 });
