@@ -30,6 +30,11 @@ export class UpdateCategoryUseCase {
 
   async execute(input: UpdateCategoryInput): Promise<Category> {
     assertIsAdmin(input.actor); // REQ-AC-006
+    if (input.patch.name !== undefined && !input.patch.name.trim()) {
+      // Defense-in-depth: route handler validates first and returns 400 before
+      // reaching this branch (see categories.routes.ts).
+      throw new Error('Field "name" must be a non-empty string');
+    }
     if (input.patch.color !== undefined && !HEX_COLOR.test(input.patch.color)) {
       // Defense-in-depth: route handler validates first and returns 400 before
       // reaching this branch (see categories.routes.ts).
