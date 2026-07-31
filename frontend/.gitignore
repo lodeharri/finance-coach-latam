@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.*.local
+.env.production
+!.env.example
+coverage/
+playwright-report/
+test-results/
+public/mockServiceWorker.js

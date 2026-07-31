@@ -6,6 +6,14 @@ name: deploy-staging
 on:
   push:
     branches: [main]
+    paths:
+      - 'backend/**'
+      - 'infra/**'
+      - 'frontend/**'
+      - '.github/workflows/deploy-*.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.gitignore'
 
 permissions:
   contents: read
@@ -16,7 +24,7 @@ concurrency:
 
 jobs:
   deploy:
-    name: Deploy to staging
+    name: Deploy backend to staging
     environment: staging
     runs-on: ubuntu-latest
     defaults:
@@ -95,3 +103,51 @@ jobs:
           echo "- API URL: \`${{ steps.cdk.outputs.FinanceCoachApiUrl }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- Triggered by: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+
+  deploy-frontend:
+    name: Deploy frontend to Cloudflare Pages
+    needs: deploy
+    if: needs.deploy.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build SPA
+        env:
+          VITE_API_BASE_URL: ${{ needs.deploy.outputs.api_url }}
+          VITE_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.COGNITO_USER_POOL_CLIENT_ID }}
+          VITE_COGNITO_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          npm ci
+          npm run build
+          # Fail fast if env vars are empty — silent bugs surface as broken SPA at runtime.
+          test -n "$VITE_API_BASE_URL" || (echo "VITE_API_BASE_URL is empty" && exit 1)
+          test -n "$VITE_COGNITO_USER_POOL_CLIENT_ID" || (echo "VITE_COGNITO_USER_POOL_CLIENT_ID is empty" && exit 1)
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: frontend
+          command: pages deploy dist --project-name=finance-coach-latam --branch=main
+
+      - name: Smoke (Pages URL reachable)
+        run: |
+          URL="https://finance-coach-latam.pages.dev"
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+          [ "$HTTP" = "200" ] || (echo "Pages returned $HTTP" && exit 1)
+          echo "✓ Pages URL returned 200"
