@@ -30,10 +30,10 @@
   "devDependencies": {
     "@types/aws-lambda": "^8.10.142",
     "@types/node": "^24.0.0",
-    "@vitest/coverage-v8": "^2.0.0",
+    "@vitest/coverage-v8": "^4.1.10",
     "drizzle-kit": "^0.24.0",
     "esbuild": "^0.24.0",
     "typescript": "^5.4.0",
-    "vitest": "^2.0.0"
+    "vitest": "^4.1.10"
   }
 }
