@@ -24,4 +24,15 @@ export interface MerchantCachePort {
    * concurrent transaction for the same merchant MUST NOT throw.
    */
   save(merchant: string, categoryId: string): Promise<void>;
+
+  /**
+   * Delete every cache row whose `category_id` matches.
+   *
+   * Called by admin PATCH/DELETE on a category so future transactions
+   * re-classify against the new identity (REQ-AC-008).
+   *
+   * Implementations MUST be tolerant of `categoryId` values that have no
+   * matching rows — the operation is idempotent at the cache layer.
+   */
+  invalidateByCategoryId(categoryId: string): Promise<void>;
 }

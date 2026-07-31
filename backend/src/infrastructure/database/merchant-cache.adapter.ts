@@ -10,6 +10,9 @@ const INSERT_SQL =
   'INSERT INTO merchant_category_cache (merchant, category_id) ' +
   'VALUES ($1, $2) ON CONFLICT (merchant) DO NOTHING';
 
+const INVALIDATE_SQL =
+  'DELETE FROM merchant_category_cache WHERE category_id = $1';
+
 /**
  * Neon-backed implementation of {@link MerchantCachePort}.
  *
@@ -42,5 +45,9 @@ export class MerchantCacheAdapter implements MerchantCachePort {
 
   async save(merchant: string, categoryId: string): Promise<void> {
     await this.requireQuery()(INSERT_SQL, [merchant, categoryId]);
+  }
+
+  async invalidateByCategoryId(categoryId: string): Promise<void> {
+    await this.requireQuery()(INVALIDATE_SQL, [categoryId]);
   }
 }
