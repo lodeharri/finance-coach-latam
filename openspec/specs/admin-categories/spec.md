@@ -85,3 +85,69 @@ The system SHALL validate `color` against `^#[0-9A-Fa-f]{6}$`. Invalid colors MU
 - GIVEN a payload with `color === 'red'` or `'#FFF'`
 - WHEN `CreateCategoryUseCase.execute(input)` runs
 - THEN it throws an `Error` referencing `color` and inserts nothing
+
+### Requirement: Only admin can update a category
+
+The system SHALL permit `PATCH /categories/{id}` only when `actor.role === 'admin'`. The PATCH body MUST contain at least one of `name` or `color`; if both are absent the route MUST respond `400`. When `name` is supplied the system MUST recompute the embedding asynchronously (fire-and-forget) so the response returns without awaiting `llm.embed`. `slug` SHALL NOT be updatable. When `color` is supplied it MUST match `^#[0-9A-Fa-f]{6}$`. Non-admin actors MUST receive `403`.
+
+#### Scenario: admin updates name and color
+
+- GIVEN an admin actor and an existing category
+- WHEN `PATCH /categories/{id}` runs with `{ "name": "Transporte", "color": "#AABBCC" }`
+- THEN the row is updated, the route responds `200`, and an embedding recompute is triggered for the new name without blocking the response
+
+#### Scenario: non-admin is rejected
+
+- GIVEN an actor with `role === 'user'` and an existing category
+- WHEN `PATCH /categories/{id}` runs
+- THEN the route responds `403` and no DB write occurs
+
+#### Scenario: empty body rejected
+
+- GIVEN an admin actor and an existing category
+- WHEN `PATCH /categories/{id}` runs with an empty body
+- THEN the route responds `400` and no DB write occurs
+
+### Requirement: Only admin can delete a category
+
+The system SHALL permit `DELETE /categories/{id}` only when `actor.role === 'admin'`. On success the route MUST respond `204` and remove the row. If the category does not exist the route MUST respond `404`. If the category is referenced by at least one row in `transactions` via `category_id` the route MUST respond `409` and the category row MUST remain. Non-admin actors MUST receive `403`.
+
+#### Scenario: admin deletes a category
+
+- GIVEN an admin actor and an existing category with no referencing transactions
+- WHEN `DELETE /categories/{id}` runs
+- THEN the row is deleted and the route responds `204`
+
+#### Scenario: non-admin is rejected
+
+- GIVEN an actor with `role === 'user'` and an existing category
+- WHEN `DELETE /categories/{id}` runs
+- THEN the route responds `403` and no DB write occurs
+
+#### Scenario: category in use by transactions
+
+- GIVEN an admin actor and a category referenced by at least one transaction
+- WHEN `DELETE /categories/{id}` runs
+- THEN the route responds `409` and the category row remains
+
+### Requirement: Cache is invalidated on category update and delete
+
+The system SHALL delete `merchant_category_cache` rows whose `category_id` matches the affected category as part of both `PATCH /categories/{id}` and `DELETE /categories/{id}` operations. The invalidation MUST be best-effort: if the cache invalidation call throws, the underlying category update or delete SHALL still succeed and a WARN log entry SHALL record the failure.
+
+#### Scenario: update invalidates cache rows
+
+- GIVEN an admin actor, an existing category, and one or more `merchant_category_cache` rows with that `category_id`
+- WHEN `PATCH /categories/{id}` runs successfully
+- THEN the cache rows for that `category_id` are removed
+
+#### Scenario: delete invalidates cache rows
+
+- GIVEN an admin actor, an existing category, and one or more `merchant_category_cache` rows with that `category_id`
+- WHEN `DELETE /categories/{id}` runs successfully
+- THEN the cache rows for that `category_id` are removed
+
+#### Scenario: cache invalidation failure is non-blocking
+
+- GIVEN an admin actor, an existing category, and a `merchantCache.invalidateByCategoryId` call that throws
+- WHEN `PATCH /categories/{id}` or `DELETE /categories/{id}` runs
+- THEN the category update or delete succeeds, a WARN log is emitted, and the route responds `200` or `204` respectively
