@@ -86,11 +86,11 @@ jobs:
             // List unique packages
             const seen = new Set();
             const pkgList = [];
-            for (const [name, advisoryList] of Object.entries(vulns)) {
+            for (const [name, adv] of Object.entries(vulns)) {
               if (seen.has(name)) continue;
               seen.add(name);
-              const adv = advisoryList[0];
-              pkgList.push(`- **${name}** — ${adv.severity} — via ${adv.via.slice(0, 3).join(', ')}${adv.via.length > 3 ? '...' : ''}`);
+              const viaArr = Array.isArray(adv.via) ? adv.via : [];
+              pkgList.push(`- **${name}** — ${adv.severity} — via ${viaArr.slice(0, 3).join(', ')}${viaArr.length > 3 ? '...' : ''}`);
             }
             if (pkgList.length > 0) {
               lines.push(`### Packages affected`);
