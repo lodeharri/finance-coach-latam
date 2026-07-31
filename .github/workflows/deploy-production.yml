@@ -68,6 +68,7 @@ jobs:
           npm run build
 
       - name: CDK deploy
+        id: cdk
         working-directory: infra
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
