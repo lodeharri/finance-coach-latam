@@ -9,7 +9,7 @@ import type { Transaction } from '@/services/types';
 import type { Category } from '@/services/types';
 
 export interface DashboardStats {
-  /** Month-to-date spend in cents (only CATEGORIZED transactions). */
+  /** Month-to-date spend in cents (CATEGORIZED + PENDING; FAILED excluded). */
   mtdSpendCents: number;
   /** Top categories by spend this month (capped). */
   topCategories: ReadonlyArray<{ categoryId: string; name: string; color: string; totalCents: number }>;
@@ -45,7 +45,10 @@ export function computeDashboardStats(
     const occurred = new Date(tx.occurredAt);
     if (Number.isNaN(occurred.getTime())) continue;
     if (occurred < monthStart) continue;
-    if (tx.status !== 'CATEGORIZED') continue;
+    // Exclude only FAILED — PENDING is real spend that the SQS categorizer
+    // hasn't labeled yet; surface it alongside pendingCount so the user can
+    // see "1 to categorize" next to the real number.
+    if (tx.status === 'FAILED') continue;
     // Treat negative amounts (refunds) as reducing spend; positive amounts as spend.
     const cents = tx.amountCents;
     mtdSpendCents += cents;

@@ -89,7 +89,10 @@ export function InsightsPage({ apiBaseUrl }: InsightsPageProps) {
     if (rows.length === 0) return rows;
     const start = periodStart(period, new Date());
     return rows.filter((tx) => {
-      if (tx.status !== 'CATEGORIZED') return false;
+      // Exclude only FAILED — PENDING is real spend the categorizer hasn't
+      // labeled yet. Same rule as dashboard-stats.ts so Dashboard MTD and
+      // Insights totals never disagree for the same user (REL-001).
+      if (tx.status === 'FAILED') return false;
       const occurred = new Date(tx.occurredAt);
       return occurred >= start;
     });
@@ -169,7 +172,10 @@ export function InsightsPage({ apiBaseUrl }: InsightsPageProps) {
       const next = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
       const total = (transactions.data ?? [])
         .filter((tx) => {
-          if (tx.status !== 'CATEGORIZED') return false;
+          // Same rule as the period filter above: include CATEGORIZED + PENDING,
+          // exclude FAILED. Keeps Insights 12-month trend in parity with the
+          // Dashboard sparkline (REL-001).
+          if (tx.status === 'FAILED') return false;
           const occurred = new Date(tx.occurredAt);
           return occurred >= d && occurred < next;
         })

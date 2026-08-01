@@ -65,6 +65,17 @@ describe('AccountForm', () => {
     expect(nameInput.value).toBe('Checking');
   });
 
+  it('renders a visible label for each account type (BANK, CASH, CARD)', () => {
+    wrap(<AccountForm apiBaseUrl={BASE} userId="u1" />);
+
+    // Visible label — not the sr-only a11y duplicate. data-testid makes the
+    // assertion unambiguous so future refactors that keep the sr-only span
+    // don't break the test.
+    expect(screen.getByTestId('account-type-label-BANK')).toHaveTextContent('BANK');
+    expect(screen.getByTestId('account-type-label-CASH')).toHaveTextContent('CASH');
+    expect(screen.getByTestId('account-type-label-CARD')).toHaveTextContent('CARD');
+  });
+
   it('selecting CASH updates the active type glyph', async () => {
     const user = userEvent.setup();
     wrap(<AccountForm apiBaseUrl={BASE} userId="u1" />);
@@ -132,7 +143,18 @@ describe('AccountForm', () => {
     server.use(
       http.post(`${BASE}/accounts`, async ({ request }) => {
         captured = await request.json();
-        return HttpResponse.json({ id: 'a-new' }, { status: 201 });
+        // Full Account — apiClient parses /accounts responses through
+        // AccountSchema, which requires 5 fields (REL-003).
+        return HttpResponse.json(
+          {
+            id: 'a-new',
+            userId: 'u1',
+            name: 'Checking',
+            type: 'BANK',
+            createdAt: new Date().toISOString(),
+          },
+          { status: 201 },
+        );
       }),
     );
 
@@ -145,6 +167,11 @@ describe('AccountForm', () => {
 
     await waitFor(() => expect(captured).not.toBeNull());
     expect((captured as { name: string }).name).toBe('Checking');
+    // Success path must not surface a backend error. If the response is a
+    // partial Account, apiClient rejects it through AccountSchema and the
+    // mutation's onError sets the inline error — pin the absence here
+    // (REL-003).
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('disables submit and shows "Saving…" while the mutation is in-flight', async () => {
@@ -152,7 +179,21 @@ describe('AccountForm', () => {
     server.use(
       http.post(`${BASE}/accounts`, () =>
         new Promise<Response>((resolve) => {
-          resolvePost = () => resolve(HttpResponse.json({ id: 'a-new' }, { status: 201 }));
+          // Full Account — apiClient parses /accounts responses through
+          // AccountSchema (REL-003).
+          resolvePost = () =>
+            resolve(
+              HttpResponse.json(
+                {
+                  id: 'a-new',
+                  userId: 'u1',
+                  name: 'Checking',
+                  type: 'BANK',
+                  createdAt: new Date().toISOString(),
+                },
+                { status: 201 },
+              ),
+            );
         }),
       ),
     );
@@ -173,12 +214,26 @@ describe('AccountForm', () => {
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /add account/i })).toBeEnabled(),
     );
+    // No inline error surfaced (REL-003 — partial Account response would
+    // make apiClient throw validation_error through AccountSchema).
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('keeps the field values populated after a successful submit (no implicit reset)', async () => {
     server.use(
       http.post(`${BASE}/accounts`, () =>
-        HttpResponse.json({ id: 'a-new' }, { status: 201 }),
+        // Full Account — apiClient parses /accounts responses through
+        // AccountSchema (REL-003).
+        HttpResponse.json(
+          {
+            id: 'a-new',
+            userId: 'u1',
+            name: 'Checking',
+            type: 'CARD',
+            createdAt: new Date().toISOString(),
+          },
+          { status: 201 },
+        ),
       ),
     );
 
@@ -197,6 +252,8 @@ describe('AccountForm', () => {
     // values in place; this test pins that contract.
     expect(nameInput.value).toBe('Checking');
     expect(screen.getByRole('radio', { name: 'CARD' })).toHaveAttribute('aria-checked', 'true');
+    // No inline error surfaced (REL-003).
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('surfaces backend errors verbatim on mutation failure', async () => {

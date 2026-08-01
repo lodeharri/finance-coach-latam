@@ -64,29 +64,40 @@ export function AccountForm({ apiBaseUrl, userId }: AccountFormProps) {
           {TYPES.map((t) => {
             const active = type === t;
             return (
-              <button
-                key={t}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                onClick={() => setType(t)}
-                className={
-                  'inline-flex h-12 w-12 items-center justify-center rounded-sm border transition-colors ' +
-                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-cobalto focus-visible:ring-offset-2 ' +
-                  (active
-                    ? 'border-ink-cobalto bg-ink-cobalto text-ink-paper'
-                    : 'border-ink-paper-press bg-ink-paper-lift text-ink-tinta hover:border-ink-cobalto/40')
-                }
-                data-testid={`account-type-${t}`}
-              >
+              <div key={t} className="flex flex-col items-center gap-1">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => setType(t)}
+                  className={
+                    'inline-flex h-12 w-12 items-center justify-center rounded-sm border transition-colors ' +
+                    'focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-cobalto focus-visible:ring-offset-2 ' +
+                    (active
+                      ? 'border-ink-cobalto bg-ink-cobalto text-ink-paper'
+                      : 'border-ink-paper-press bg-ink-paper-lift text-ink-tinta hover:border-ink-cobalto/40')
+                  }
+                  data-testid={`account-type-${t}`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={
+                      'block h-3 w-3 ' + (active ? 'bg-ink-paper' : 'border border-ink-tinta-mute')
+                    }
+                  />
+                  <span className="sr-only">{t}</span>
+                </button>
                 <span
                   aria-hidden="true"
+                  data-testid={`account-type-label-${t}`}
                   className={
-                    'block h-3 w-3 ' + (active ? 'bg-ink-paper' : 'border border-ink-tinta-mute')
+                    'font-mono text-[10px] uppercase tracking-[0.2em] ' +
+                    (active ? 'text-ink-tinta' : 'text-ink-tinta-soft')
                   }
-                />
-                <span className="sr-only">{t}</span>
-              </button>
+                >
+                  {t}
+                </span>
+              </div>
             );
           })}
         </div>

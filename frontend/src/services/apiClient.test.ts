@@ -168,4 +168,69 @@ describe('apiClient', () => {
       expect(res.data).toMatchObject({ name: 'Updated' });
     }
   });
+
+  it('normalizes legacy amount -> amountCents for /transactions responses', async () => {
+    server.use(
+      http.get(`${BASE}/transactions`, () =>
+        HttpResponse.json([
+          {
+            id: 't1',
+            userId: 'u1',
+            accountId: 'a1',
+            categoryId: null,
+            merchant: 'Cafe',
+            amount: 4200,
+            occurredAt: '2026-01-15T12:00:00.000Z',
+            createdAt: '2026-01-15T12:00:00.000Z',
+            status: 'PENDING',
+            notes: null,
+          },
+        ]),
+      ),
+    );
+    const res = await apiClient.get<Array<{ id: string; amountCents: number }>>(`${BASE}/transactions`);
+    expect(isSuccess(res)).toBe(true);
+    if (isSuccess(res)) {
+      expect(res.data[0]?.amountCents).toBe(4200);
+      expect((res.data[0] as Record<string, unknown>).amount).toBeUndefined();
+    }
+  });
+
+  it('keeps 204 responses returning data: null', async () => {
+    server.use(
+      http.delete(`${BASE}/transactions/t1`, () => new HttpResponse(null, { status: 204 })),
+    );
+    const res = await apiClient.del(`${BASE}/transactions/t1`);
+    expect(isSuccess(res)).toBe(true);
+    if (isSuccess(res)) {
+      expect(res.data).toBeNull();
+    }
+  });
+
+  it('keeps non-JSON 2xx responses returning data: null (no parse attempt)', async () => {
+    server.use(
+      http.get(`${BASE}/health`, () =>
+        new HttpResponse('OK', { status: 200, headers: { 'Content-Type': 'text/plain' } }),
+      ),
+    );
+    const res = await apiClient.get(`${BASE}/health`);
+    expect(isSuccess(res)).toBe(true);
+    if (isSuccess(res)) {
+      expect(res.data).toBeNull();
+    }
+  });
+
+  it('keeps network_error path returning network_error code (no parse attempted)', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (() => Promise.reject(new TypeError('Failed to fetch'))) as typeof fetch;
+    try {
+      const res = await apiClient.get(`${BASE}/transactions`);
+      expect(isFailure(res)).toBe(true);
+      if (isFailure(res)) {
+        expect(res.code).toBe('network_error');
+      }
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });

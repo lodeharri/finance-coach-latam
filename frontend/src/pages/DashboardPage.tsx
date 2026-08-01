@@ -79,7 +79,8 @@ export function DashboardPage({ apiBaseUrl }: DashboardPageProps) {
   }));
 
   // For sparkline we synthesize the last 6 months of MTD spend from the
-  // loaded transactions.
+  // loaded transactions. Include PENDING (real spend not yet labeled by the
+  // categorizer) but exclude FAILED — same rule as the MTD hero number.
   const months: Array<{ month: string; totalCents: number }> = (() => {
     const monthsLabels = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
     const now = new Date();
@@ -89,7 +90,7 @@ export function DashboardPage({ apiBaseUrl }: DashboardPageProps) {
       const next = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
       const total = (transactions.data ?? [])
         .filter((tx) => {
-          if (tx.status !== 'CATEGORIZED') return false;
+          if (tx.status === 'FAILED') return false;
           const occurred = new Date(tx.occurredAt);
           return occurred >= d && occurred < next;
         })
