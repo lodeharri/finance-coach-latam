@@ -9,6 +9,7 @@ import type { ListCategoriesUseCase } from '../../application/use-cases/list-cat
 import type { ListTransactionsByUserUseCase } from '../../application/use-cases/list-transactions-by-user.use-case';
 import type { ListUsersUseCase } from '../../application/use-cases/list-users.use-case';
 import type { UpdateCategoryUseCase } from '../../application/use-cases/update-category.use-case';
+import type { UpdateTransactionCategoryUseCase } from '../../application/use-cases/update-transaction.use-case';
 import { createAccountsRoutes } from './accounts.routes';
 import { createCategoriesRoutes } from './categories.routes';
 import { jsonResponse, type HttpRouteHandler } from './http.utils';
@@ -27,6 +28,7 @@ export interface ApiRoutesDeps {
   readonly createTransactionUseCase: CreateTransactionUseCase;
   readonly categorizeTransactionUseCase: CategorizeTransactionUseCase;
   readonly listTransactionsByUserUseCase: ListTransactionsByUserUseCase;
+  readonly updateTransactionCategoryUseCase: UpdateTransactionCategoryUseCase;
 }
 
 export function createApiRoutes(deps: ApiRoutesDeps): HttpRouteHandler {
@@ -46,6 +48,7 @@ export function createApiRoutes(deps: ApiRoutesDeps): HttpRouteHandler {
     }
     if (
       event.rawPath === '/transactions' ||
+      /^\/transactions\/[^/]+$/.test(event.rawPath) ||
       /^\/transactions\/[^/]+\/categorize$/.test(event.rawPath)
     ) {
       return transactions(event);

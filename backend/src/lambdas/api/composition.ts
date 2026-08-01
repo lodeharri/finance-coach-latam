@@ -9,6 +9,7 @@ import { ListCategoriesUseCase } from '../../application/use-cases/list-categori
 import { ListTransactionsByUserUseCase } from '../../application/use-cases/list-transactions-by-user.use-case';
 import { ListUsersUseCase } from '../../application/use-cases/list-users.use-case';
 import { UpdateCategoryUseCase } from '../../application/use-cases/update-category.use-case';
+import { UpdateTransactionCategoryUseCase } from '../../application/use-cases/update-transaction.use-case';
 import { CognitoIdentityAdapter } from '../../infrastructure/cognito/cognito-identity.adapter';
 import { getConfig } from '../../infrastructure/config/env.config';
 import {
@@ -81,6 +82,12 @@ export function buildApiComposition() {
     listTransactionsByUserUseCase: new ListTransactionsByUserUseCase(
       database,
       transactionTableRef,
+    ),
+    updateTransactionCategoryUseCase: new UpdateTransactionCategoryUseCase(
+      database,
+      transactionTableRef,
+      categoryTableRef,
+      merchantCache,
     ),
   });
 }
