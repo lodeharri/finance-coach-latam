@@ -31,13 +31,15 @@ interface TransactionProbe {
 function Probe({
   userId,
   limit,
+  offset,
   onReady,
 }: {
   userId?: string;
   limit?: number;
+  offset?: number;
   onReady: (api: TransactionProbe) => void;
 }) {
-  const list = useTransactions({ apiBaseUrl: BASE, userId, limit });
+  const list = useTransactions({ apiBaseUrl: BASE, userId, limit, offset });
   const create = useCreateTransaction({ apiBaseUrl: BASE });
   const update = useUpdateTransaction({ apiBaseUrl: BASE });
   const recategorize = useRecategorizeTransaction({ apiBaseUrl: BASE });
@@ -122,6 +124,33 @@ describe('useTransactions', () => {
 
     wrap(<Probe userId="other" onReady={() => {}} />);
     await waitFor(() => expect(hit).toContain('userId=other'));
+  });
+
+  it('appends offset query parameter when provided (pagination)', async () => {
+    let hit = '';
+    server.use(
+      http.get('https://api.example.test/transactions', ({ request }) => {
+        hit = request.url;
+        return HttpResponse.json([]);
+      }),
+    );
+
+    wrap(<Probe limit={25} offset={50} onReady={() => {}} />);
+    await waitFor(() => expect(hit).toContain('offset=50'));
+  });
+
+  it('omits the offset query parameter when not provided (back-compat)', async () => {
+    let hit = '';
+    server.use(
+      http.get('https://api.example.test/transactions', ({ request }) => {
+        hit = request.url;
+        return HttpResponse.json([]);
+      }),
+    );
+
+    wrap(<Probe limit={25} onReady={() => {}} />);
+    await waitFor(() => expect(hit).toContain('limit=25'));
+    expect(hit).not.toContain('offset=');
   });
 
   it('returns rows when the API returns them', async () => {

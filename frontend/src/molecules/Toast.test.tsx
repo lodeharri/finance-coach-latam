@@ -34,18 +34,18 @@ describe('Toast', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Failed');
   });
 
-  it('retryable variant uses role="alert" and exposes Retry button', () => {
+  it('retryable variant uses role="alert" and exposes Reintentar button', () => {
     render(
       <Toast
         id="t4"
         variant="retryable"
-        message="Network failed"
+        message="Falló la red"
         onDismiss={() => {}}
         onRetry={() => {}}
       />,
     );
-    expect(screen.getByRole('alert')).toHaveTextContent('Network failed');
-    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('Falló la red');
+    expect(screen.getByRole('button', { name: /reintentar/i })).toBeInTheDocument();
   });
 
   it('non-error toasts auto-dismiss after the default timeout', () => {
@@ -67,31 +67,31 @@ describe('Toast', () => {
     expect(onDismiss).not.toHaveBeenCalled();
   });
 
-  it('Retry button invokes onRetry with the toast id', () => {
+  it('Reintentar button invokes onRetry with the toast id', () => {
     const onRetry = vi.fn();
     render(
       <Toast
         id="t7"
         variant="retryable"
-        message="Try again"
+        message="Reintentar"
         onDismiss={() => {}}
         onRetry={onRetry}
       />,
     );
     act(() => {
-      screen.getByRole('button', { name: /retry/i }).click();
+      screen.getByRole('button', { name: /reintentar/i }).click();
     });
     expect(onRetry).toHaveBeenCalledWith('t7');
   });
 
-  it('Close button invokes onDismiss with the toast id', () => {
+  it('Cerrar button invokes onDismiss with the toast id', () => {
     const onDismiss = vi.fn();
-    render(<Toast id="t8" variant="info" message="Hi" onDismiss={onDismiss} />);
+    render(<Toast id="t8" variant="info" message="Hola" onDismiss={onDismiss} />);
     act(() => {
       vi.clearAllTimers();
     });
     act(() => {
-      screen.getByRole('button', { name: /close/i }).click();
+      screen.getByRole('button', { name: /cerrar/i }).click();
     });
     expect(onDismiss).toHaveBeenCalledWith('t8');
   });

@@ -26,6 +26,7 @@ export interface SelectOptions<TEntity> {
     readonly direction: 'asc' | 'desc';
   };
   readonly limit?: number;
+  readonly offset?: number;
 }
 
 export interface DatabasePort {

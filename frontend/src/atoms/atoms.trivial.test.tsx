@@ -62,33 +62,33 @@ describe('Label', () => {
 
 describe('Badge', () => {
   it('renders children text', () => {
-    render(<Badge variant="positivo">CATEGORIZED</Badge>);
-    expect(screen.getByText('CATEGORIZED')).toBeInTheDocument();
+    render(<Badge variant="positivo">CATEGORIZADO</Badge>);
+    expect(screen.getByText('CATEGORIZADO')).toBeInTheDocument();
   });
 
   it('positivo variant uses positivo token', () => {
-    render(<Badge variant="positivo">CATEGORIZED</Badge>);
-    expect(screen.getByText('CATEGORIZED').className).toMatch(/bg-ink-positivo/);
+    render(<Badge variant="positivo">CATEGORIZADO</Badge>);
+    expect(screen.getByText('CATEGORIZADO').className).toMatch(/bg-ink-positivo/);
   });
 
   it('negativo variant uses negativo token', () => {
-    render(<Badge variant="negativo">DECLINED</Badge>);
-    expect(screen.getByText('DECLINED').className).toMatch(/bg-ink-negativo/);
+    render(<Badge variant="negativo">RECHAZADO</Badge>);
+    expect(screen.getByText('RECHAZADO').className).toMatch(/bg-ink-negativo/);
   });
 
   it('fallo variant uses fallo token (FAILED state)', () => {
-    render(<Badge variant="fallo">FAILED</Badge>);
-    expect(screen.getByText('FAILED').className).toMatch(/bg-ink-fallo/);
+    render(<Badge variant="fallo">FALLIDO</Badge>);
+    expect(screen.getByText('FALLIDO').className).toMatch(/bg-ink-fallo/);
   });
 
   it('alerta variant uses alerta token (PENDING state)', () => {
-    render(<Badge variant="alerta">PENDING</Badge>);
-    expect(screen.getByText('PENDING').className).toMatch(/bg-ink-alerta/);
+    render(<Badge variant="alerta">PENDIENTE</Badge>);
+    expect(screen.getByText('PENDIENTE').className).toMatch(/bg-ink-alerta/);
   });
 
   it('neutral variant uses paper-press token', () => {
-    render(<Badge variant="neutral">DRAFT</Badge>);
-    expect(screen.getByText('DRAFT').className).toMatch(/bg-ink-paper-press/);
+    render(<Badge variant="neutral">BORRADOR</Badge>);
+    expect(screen.getByText('BORRADOR').className).toMatch(/bg-ink-paper-press/);
   });
 
   it('renders an inline SVG icon when provided', () => {
@@ -101,7 +101,7 @@ describe('Badge', () => {
           </svg>
         }
       >
-        WITH ICON
+        CON ÍCONO
       </Badge>,
     );
     expect(screen.getByTestId('badge-icon')).toBeInTheDocument();
@@ -118,7 +118,7 @@ describe('Badge', () => {
           </svg>
         }
       >
-        WITH ICON
+        CON ÍCONO
       </Badge>,
     );
     expect(screen.getByTestId('badge-icon')).toHaveAttribute('aria-hidden', 'true');

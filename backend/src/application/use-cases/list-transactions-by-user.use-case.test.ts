@@ -48,4 +48,22 @@ describe('ListTransactionsByUserUseCase', () => {
       expect.objectContaining({ limit: 10 }),
     );
   });
+
+  it('forwards an offset to the database when provided (pagination)', async () => {
+    vi.mocked(database.select).mockResolvedValueOnce([]);
+
+    await useCase.execute({
+      actor: { userId, role: 'user' },
+      userId,
+      limit: 25,
+      offset: 50,
+    });
+
+    expect(database.select).toHaveBeenCalledWith(transactionTableRef, {
+      where: { userId },
+      orderBy: { field: 'occurredAt', direction: 'desc' },
+      limit: 25,
+      offset: 50,
+    });
+  });
 });

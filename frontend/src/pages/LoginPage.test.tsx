@@ -47,9 +47,9 @@ describe('LoginPage', () => {
 
   it('renders email and password fields inside AuthShell', () => {
     wrap(<LoginPage env={ENV} />);
-    expect(screen.getByRole('heading', { name: /sign in/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /iniciar sesión/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/correo/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/contraseña/i)).toBeInTheDocument();
   });
 
   it('shows inline error from Cognito NotAuthorizedException', async () => {
@@ -65,17 +65,11 @@ describe('LoginPage', () => {
       )) as unknown as typeof fetch;
 
     wrap(<LoginPage env={ENV} />);
-    const emailInput = screen.getByLabelText(/email/i);
-    const passwordInput = screen.getByLabelText(/password/i);
-    const submit = screen.getByRole('button', { name: /sign in|log in|entrar/i });
+    const emailInput = screen.getByLabelText(/correo/i);
+    const passwordInput = screen.getByLabelText(/contraseña/i);
+    const submit = screen.getByRole('button', { name: /iniciar sesión|ingresar/i });
 
-    await act(async () => {
-      // Use fireEvent typing helpers via screen — but easier: call onChange via .fill
-    });
-
-    // Use the userEvent-style direct value-set on controlled inputs.
     emailInput.focus();
-    // Use native setter so React picks up the value change.
     const nativeInputSetter = Object.getOwnPropertyDescriptor(
       window.HTMLInputElement.prototype,
       'value',
@@ -112,9 +106,9 @@ describe('LoginPage', () => {
 
     wrap(<LoginPage env={ENV} />);
 
-    const emailInput = screen.getByLabelText(/email/i);
-    const passwordInput = screen.getByLabelText(/password/i);
-    const submit = screen.getByRole('button', { name: /sign in|log in|entrar/i });
+    const emailInput = screen.getByLabelText(/correo/i);
+    const passwordInput = screen.getByLabelText(/contraseña/i);
+    const submit = screen.getByRole('button', { name: /iniciar sesión|ingresar/i });
 
     const setter = Object.getOwnPropertyDescriptor(
       window.HTMLInputElement.prototype,
@@ -129,7 +123,6 @@ describe('LoginPage', () => {
       submit.click();
     });
 
-    // After login, session is set.
     expect(sessionStore.getState().idToken).toBe(idToken);
   });
 });

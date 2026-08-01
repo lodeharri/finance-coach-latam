@@ -88,11 +88,11 @@ export function StatsCard({
           className="mt-3 block font-display text-4xl font-bold leading-none tracking-tight text-ink-tinta"
           data-testid="stats-card-hero-number"
         >
-          <AmountText amountCents={amountCents} currency="ARS" />
+          <AmountText amountCents={amountCents} currency="COP" />
         </span>
       ) : amountCents !== undefined ? (
         <span className="mt-2 block font-display text-3xl font-bold text-ink-tinta">
-          <AmountText amountCents={amountCents} currency="ARS" />
+          <AmountText amountCents={amountCents} currency="COP" />
         </span>
       ) : (
         <span className="mt-2 block font-display text-3xl font-bold text-ink-tinta">{children}</span>

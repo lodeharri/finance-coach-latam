@@ -30,7 +30,7 @@ export function AccountForm({ apiBaseUrl, userId }: AccountFormProps) {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      setError('Account name is required.');
+      setError('El nombre de la cuenta es obligatorio.');
       return;
     }
     setError(undefined);
@@ -38,7 +38,7 @@ export function AccountForm({ apiBaseUrl, userId }: AccountFormProps) {
       { userId, name: name.trim(), type },
       {
         onError: (err) => {
-          setError(err instanceof Error ? err.message : 'Could not create account.');
+          setError(err instanceof Error ? err.message : 'No se pudo crear la cuenta.');
         },
       },
     );
@@ -48,11 +48,11 @@ export function AccountForm({ apiBaseUrl, userId }: AccountFormProps) {
     <form onSubmit={submit} noValidate className="flex flex-col gap-5" data-testid="account-form">
       <FormField
         id="acc-name"
-        label="Account name"
+        label="Nombre de la cuenta"
         variant="editorial"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        placeholder="Checking"
+        placeholder="Cuenta corriente"
         required
         error={error}
       />
@@ -110,7 +110,7 @@ export function AccountForm({ apiBaseUrl, userId }: AccountFormProps) {
       </div>
       <div>
         <Button type="submit" disabled={create.isPending}>
-          {create.isPending ? 'Saving…' : 'Add account'}
+          {create.isPending ? 'Guardando…' : 'Agregar cuenta'}
         </Button>
       </div>
     </form>

@@ -114,67 +114,67 @@ export function DashboardPage({ apiBaseUrl }: DashboardPageProps) {
         <div className="flex items-baseline justify-between gap-4">
           <h1 className="font-display text-2xl font-bold text-ink-tinta">Tu mes, en cifras</h1>
           <span className="font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta-mute">
-            {totalCategories} {totalCategories === 1 ? 'category' : 'categories'} configured
+            {totalCategories} {totalCategories === 1 ? 'categoría configurada' : 'categorías configuradas'}
           </span>
         </div>
       </header>
 
       <div className="grid grid-cols-12 gap-4">
         <StatsCard
-          label="MTD spend"
+          label="Gasto del mes"
           amountCents={stats.mtdSpendCents}
           variant="hero"
           ordinal="N.º 01 · HERO"
-          ariaLabel={`Month to date spend: ${stats.mtdSpendCents} cents`}
+          ariaLabel={`Gasto del mes: ${stats.mtdSpendCents} centavos`}
           delta={
             stats.pendingCount + stats.failedCount > 0
               ? {
-                  label: `${stats.pendingCount} pending · ${stats.failedCount} failed`,
+                  label: `${stats.pendingCount} pendientes · ${stats.failedCount} fallidos`,
                   tone: stats.failedCount > 0 ? 'fallo' : 'alerta',
                 }
               : undefined
           }
         />
         <StatsCard
-          label="Top category"
+          label="Categoría principal"
           amountCents={top?.totalCents ?? 0}
           variant="compact"
           ordinal="N.º 02"
-          ariaLabel={top ? `Top category: ${top.name}` : 'Top category'}
+          ariaLabel={top ? `Categoría principal: ${top.name}` : 'Categoría principal'}
           delta={top ? { label: top.name, tone: 'neutral' } : undefined}
         />
         <StatsCard
-          label="Pending"
+          label="Pendientes"
           variant="compact"
           ordinal="N.º 03"
-          delta={{ label: `${stats.pendingCount} to categorize`, tone: 'alerta' }}
-          ariaLabel={`${stats.pendingCount} pending`}
+          delta={{ label: `${stats.pendingCount} por categorizar`, tone: 'alerta' }}
+          ariaLabel={`${stats.pendingCount} pendientes`}
         >
           <span>{stats.pendingCount}</span>
         </StatsCard>
         <StatsCard
-          label="Failed"
+          label="Fallidos"
           variant="compact"
           ordinal="N.º 04"
-          delta={{ label: `${stats.failedCount} need attention`, tone: 'fallo' }}
-          ariaLabel={`${stats.failedCount} failed`}
+          delta={{ label: `${stats.failedCount} requieren atención`, tone: 'fallo' }}
+          ariaLabel={`${stats.failedCount} fallidos`}
         >
           <span>{stats.failedCount}</span>
         </StatsCard>
         <div className="col-span-12 md:col-span-6">
-          <SectionHead kicker="* * *&nbsp;&nbsp;DISTRIBUCIÓN">Spend by category</SectionHead>
+          <SectionHead kicker="* * *&nbsp;&nbsp;DISTRIBUCIÓN">Gasto por categoría</SectionHead>
           <Suspense fallback={<ChartSkeleton />}>
             <SpendDonut data={donutData} />
           </Suspense>
         </div>
         <div className="col-span-12 md:col-span-6">
-          <SectionHead kicker="* * *&nbsp;&nbsp;SERIE">Last 6 months</SectionHead>
+          <SectionHead kicker="* * *&nbsp;&nbsp;SERIE">Últimos 6 meses</SectionHead>
           <Suspense fallback={<ChartSkeleton height={200} />}>
             <MonthlySparkline data={months} />
           </Suspense>
         </div>
         <div className="col-span-12">
-          <SectionHead kicker="* * *&nbsp;&nbsp;ACTIVIDAD">Recent activity</SectionHead>
+          <SectionHead kicker="* * *&nbsp;&nbsp;ACTIVIDAD">Actividad reciente</SectionHead>
           <RecentTransactionsList apiBaseUrl={apiBaseUrl} userId={userId} />
         </div>
       </div>

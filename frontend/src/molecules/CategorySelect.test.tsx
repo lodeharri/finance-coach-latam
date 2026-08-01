@@ -46,7 +46,7 @@ describe('CategorySelect', () => {
     );
 
     wrap(<CategorySelect apiBaseUrl={BASE} onChange={() => {}} />);
-    const trigger = screen.getByRole('button', { name: /choose category/i });
+    const trigger = screen.getByRole('button', { name: /elegir categoría/i });
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
   });
 
@@ -61,11 +61,11 @@ describe('CategorySelect', () => {
     );
 
     wrap(<CategorySelect apiBaseUrl={BASE} onChange={() => {}} />);
-    fireEvent.click(screen.getByRole('button', { name: /choose category/i }));
+    fireEvent.click(screen.getByRole('button', { name: /elegir categoría/i }));
     await waitFor(() => expect(screen.getByRole('listbox')).toBeInTheDocument());
     expect(screen.getByRole('option', { name: /transporte/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /alimentos/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /choose category/i })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: /elegir categoría/i })).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('invokes onChange with the selected categoryId', async () => {
@@ -77,7 +77,7 @@ describe('CategorySelect', () => {
 
     let captured: string | undefined;
     wrap(<CategorySelect apiBaseUrl={BASE} onChange={(id) => (captured = id)} />);
-    fireEvent.click(screen.getByRole('button', { name: /choose category/i }));
+    fireEvent.click(screen.getByRole('button', { name: /elegir categoría/i }));
     await waitFor(() => expect(screen.getByRole('listbox')).toBeInTheDocument());
     // The listbox <li role="option"> wraps a <button>; click the button inside.
     fireEvent.click(screen.getByRole('listbox').querySelector('button')!);
@@ -100,6 +100,6 @@ describe('CategorySelect', () => {
       http.get(`${BASE}/categories`, () => HttpResponse.json([])),
     );
     wrap(<CategorySelect apiBaseUrl={BASE} onChange={() => {}} disabled />);
-    expect(screen.getByRole('button', { name: /choose category/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /elegir categoría/i })).toBeDisabled();
   });
 });

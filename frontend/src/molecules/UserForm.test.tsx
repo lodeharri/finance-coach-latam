@@ -44,8 +44,8 @@ describe('UserForm', () => {
   it('renders the form with default props (empty email, empty name, BRONZE tier)', () => {
     wrap(<UserForm apiBaseUrl={BASE} />);
 
-    const email = screen.getByLabelText(/email/i) as HTMLInputElement;
-    const name = screen.getByLabelText(/name/i) as HTMLInputElement;
+    const email = screen.getByLabelText(/correo/i) as HTMLInputElement;
+    const name = screen.getByLabelText(/nombre/i) as HTMLInputElement;
     expect(email).toBeInTheDocument();
     expect(email.type).toBe('email');
     expect(email.value).toBe('');
@@ -63,7 +63,7 @@ describe('UserForm', () => {
     const user = userEvent.setup();
     wrap(<UserForm apiBaseUrl={BASE} />);
 
-    const email = screen.getByLabelText(/email/i);
+    const email = screen.getByLabelText(/correo/i);
     await user.type(email, 'jane@example.com');
     expect((email as HTMLInputElement).value).toBe('jane@example.com');
   });
@@ -72,7 +72,7 @@ describe('UserForm', () => {
     const user = userEvent.setup();
     wrap(<UserForm apiBaseUrl={BASE} />);
 
-    const name = screen.getByLabelText(/name/i);
+    const name = screen.getByLabelText(/nombre/i);
     await user.type(name, 'Jane Doe');
     expect((name as HTMLInputElement).value).toBe('Jane Doe');
   });
@@ -96,12 +96,10 @@ describe('UserForm', () => {
     const user = userEvent.setup();
     wrap(<UserForm apiBaseUrl={BASE} />);
 
-    await user.click(screen.getByRole('button', { name: /add user/i }));
+    await user.click(screen.getByRole('button', { name: /agregar usuario/i }));
 
-    expect(await screen.findByText(/email is required/i)).toBeInTheDocument();
-    expect(await screen.findByText(/name is required/i)).toBeInTheDocument();
-    // The mutation was NOT triggered because validation blocks submit.
-    // If it had, MSW would throw because there is no POST handler installed.
+    expect(await screen.findByText(/correo es obligatorio/i)).toBeInTheDocument();
+    expect(await screen.findByText(/nombre es obligatorio/i)).toBeInTheDocument();
   });
 
   it('submits a malformed email: JS validation catches it before POST (no POST fires)', async () => {
@@ -120,25 +118,24 @@ describe('UserForm', () => {
     const user = userEvent.setup();
     wrap(<UserForm apiBaseUrl={BASE} />);
 
-    await user.type(screen.getByLabelText(/email/i), 'not-an-email');
-    await user.type(screen.getByLabelText(/name/i), 'Jane');
-    await user.click(screen.getByRole('button', { name: /add user/i }));
+    await user.type(screen.getByLabelText(/correo/i), 'not-an-email');
+    await user.type(screen.getByLabelText(/nombre/i), 'Jane');
+    await user.click(screen.getByRole('button', { name: /agregar usuario/i }));
 
-    // Give any queued requests a chance to flush.
     await new Promise((r) => setTimeout(r, 30));
     expect(posts).toBe(0);
-    expect(await screen.findByText(/email is required/i)).toBeInTheDocument();
+    expect(await screen.findByText(/correo es obligatorio/i)).toBeInTheDocument();
   });
 
   it('submitting with a valid email but missing name surfaces only the name error', async () => {
     const user = userEvent.setup();
     wrap(<UserForm apiBaseUrl={BASE} />);
 
-    await user.type(screen.getByLabelText(/email/i), 'jane@example.com');
-    await user.click(screen.getByRole('button', { name: /add user/i }));
+    await user.type(screen.getByLabelText(/correo/i), 'jane@example.com');
+    await user.click(screen.getByRole('button', { name: /agregar usuario/i }));
 
-    expect(await screen.findByText(/name is required/i)).toBeInTheDocument();
-    expect(screen.queryByText(/email is required/i)).not.toBeInTheDocument();
+    expect(await screen.findByText(/nombre es obligatorio/i)).toBeInTheDocument();
+    expect(screen.queryByText(/correo es obligatorio/i)).not.toBeInTheDocument();
   });
 
   it('submitting with a valid email but missing tier is impossible (tier defaults to BRONZE)', async () => {
@@ -156,10 +153,10 @@ describe('UserForm', () => {
     const user = userEvent.setup();
     wrap(<UserForm apiBaseUrl={BASE} />);
 
-    await user.type(screen.getByLabelText(/email/i), 'jane@example.com');
-    await user.type(screen.getByLabelText(/name/i), 'Jane');
+    await user.type(screen.getByLabelText(/correo/i), 'jane@example.com');
+    await user.type(screen.getByLabelText(/nombre/i), 'Jane');
     // Do not touch the tier select.
-    await user.click(screen.getByRole('button', { name: /add user/i }));
+    await user.click(screen.getByRole('button', { name: /agregar usuario/i }));
 
     await waitFor(() => expect(captured).not.toBeNull());
     expect(captured).toEqual({ email: 'jane@example.com', name: 'Jane', tier: 'BRONZE' });
@@ -180,10 +177,10 @@ describe('UserForm', () => {
     const user = userEvent.setup();
     wrap(<UserForm apiBaseUrl={BASE} />);
 
-    await user.type(screen.getByLabelText(/email/i), 'jane@example.com');
-    await user.type(screen.getByLabelText(/name/i), 'Jane Doe');
+    await user.type(screen.getByLabelText(/correo/i), 'jane@example.com');
+    await user.type(screen.getByLabelText(/nombre/i), 'Jane Doe');
     await user.click(screen.getByRole('radio', { name: 'GOLD' }));
-    await user.click(screen.getByRole('button', { name: /add user/i }));
+    await user.click(screen.getByRole('button', { name: /agregar usuario/i }));
 
     await waitFor(() => expect(captured).not.toBeNull());
     expect(captured).toEqual({ email: 'jane@example.com', name: 'Jane Doe', tier: 'GOLD' });
@@ -201,9 +198,9 @@ describe('UserForm', () => {
     const user = userEvent.setup();
     wrap(<UserForm apiBaseUrl={BASE} />);
 
-    await user.type(screen.getByLabelText(/email/i), '  jane@example.com  ');
-    await user.type(screen.getByLabelText(/name/i), '  Jane  ');
-    await user.click(screen.getByRole('button', { name: /add user/i }));
+    await user.type(screen.getByLabelText(/correo/i), '  jane@example.com  ');
+    await user.type(screen.getByLabelText(/nombre/i), '  Jane  ');
+    await user.click(screen.getByRole('button', { name: /agregar usuario/i }));
 
     await waitFor(() => expect(captured).not.toBeNull());
     const body = captured as { email: string; name: string };
@@ -224,17 +221,17 @@ describe('UserForm', () => {
     const user = userEvent.setup();
     wrap(<UserForm apiBaseUrl={BASE} />);
 
-    await user.type(screen.getByLabelText(/email/i), 'jane@example.com');
-    await user.type(screen.getByLabelText(/name/i), 'Jane');
-    await user.click(screen.getByRole('button', { name: /add user/i }));
+    await user.type(screen.getByLabelText(/correo/i), 'jane@example.com');
+    await user.type(screen.getByLabelText(/nombre/i), 'Jane');
+    await user.click(screen.getByRole('button', { name: /agregar usuario/i }));
 
-    const saving = await screen.findByRole('button', { name: /saving…/i });
+    const saving = await screen.findByRole('button', { name: /guardando…/i });
     expect(saving).toBeDisabled();
 
     resolvePost();
 
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /add user/i })).toBeEnabled(),
+      expect(screen.getByRole('button', { name: /agregar usuario/i })).toBeEnabled(),
     );
   });
 
@@ -248,9 +245,9 @@ describe('UserForm', () => {
     const user = userEvent.setup();
     wrap(<UserForm apiBaseUrl={BASE} />);
 
-    await user.type(screen.getByLabelText(/email/i), 'taken@example.com');
-    await user.type(screen.getByLabelText(/name/i), 'Jane');
-    await user.click(screen.getByRole('button', { name: /add user/i }));
+    await user.type(screen.getByLabelText(/correo/i), 'taken@example.com');
+    await user.type(screen.getByLabelText(/nombre/i), 'Jane');
+    await user.click(screen.getByRole('button', { name: /agregar usuario/i }));
 
     expect(await screen.findByText(/email already in use/i)).toBeInTheDocument();
     const alerts = screen.getAllByRole('alert');

@@ -89,6 +89,17 @@ describe('DashboardPage', () => {
     );
   });
 
+  it('renders the Spanish labels: "Gasto del mes", "Categoría principal", "Pendientes", "Fallidos"', async () => {
+    wrap(<DashboardPage apiBaseUrl={BASE} />);
+    const cards = await screen.findAllByTestId('stats-card');
+    expect(cards.length).toBeGreaterThanOrEqual(4);
+    // The labels are rendered as the uppercased mono kicker on each card.
+    expect(cards.some((c) => /gasto del mes/i.test(c.textContent ?? ''))).toBe(true);
+    expect(cards.some((c) => /categoría principal/i.test(c.textContent ?? ''))).toBe(true);
+    expect(cards.some((c) => /pendientes/i.test(c.textContent ?? ''))).toBe(true);
+    expect(cards.some((c) => /fallidos/i.test(c.textContent ?? ''))).toBe(true);
+  });
+
   it('renders asterism section captions for the chart sections', async () => {
     wrap(<DashboardPage apiBaseUrl={BASE} />);
     // The captions live in the chart organisms (SpendDonut / MonthlySparkline).

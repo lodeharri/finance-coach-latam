@@ -64,6 +64,10 @@ export class NeonDatabaseAdapter implements DatabasePort {
       query = query.limit(options.limit);
     }
 
+    if (options.offset !== undefined) {
+      query = query.offset(options.offset);
+    }
+
     const rows = await query;
     return rows as unknown as TEntity[];
   }

@@ -8,7 +8,7 @@
  * we test them here.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@/test/test-utils';
+import { act, render, screen, waitFor } from '@/test/test-utils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { MemoryRouter } from 'react-router-dom';
@@ -68,6 +68,84 @@ describe('Editorial page headers', () => {
     expect(count.textContent).toMatch(/MOVIMIENTOS/);
   });
 
+  it('TransactionsPage renders the Spanish "Mis transacciones" heading', async () => {
+    wrap(<TransactionsPage apiBaseUrl={BASE} />, '/transactions');
+    const header = await screen.findByTestId('transactions-page-header');
+    expect(header.textContent).toMatch(/Mis transacciones/);
+  });
+
+  it('TransactionsPage renders a pagination control below the table', async () => {
+    wrap(<TransactionsPage apiBaseUrl={BASE} />, '/transactions');
+    const pagination = await screen.findByTestId('pagination');
+    expect(pagination).toBeInTheDocument();
+  });
+
+  it('TransactionsPage shows "Mostrando N · PÁGINA X" range indicator', async () => {
+    server.use(
+      http.get(`${BASE}/transactions`, () =>
+        HttpResponse.json(
+          Array.from({ length: 25 }).map((_, i) => ({
+            id: `t${i}`,
+            userId: 'u1',
+            accountId: 'a1',
+            categoryId: 'c1',
+            merchant: `M${i}`,
+            amountCents: 1000 * (i + 1),
+            occurredAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            status: 'CATEGORIZED',
+            notes: null,
+          })),
+        ),
+      ),
+    );
+    wrap(<TransactionsPage apiBaseUrl={BASE} />, '/transactions');
+    await screen.findByTestId('pagination');
+    const range = await screen.findByTestId('transactions-range');
+    await waitFor(() => {
+      expect(range.textContent).toMatch(/Mostrando/);
+      expect(range.textContent).toMatch(/1–25/);
+    });
+  });
+
+  it('clicking Next re-fetches the next page with the new offset', async () => {
+    const seenOffsets = new Set<string>();
+    server.use(
+      http.get(`${BASE}/transactions`, ({ request }) => {
+        seenOffsets.add(new URL(request.url).searchParams.get('offset') ?? '');
+        return HttpResponse.json(
+          Array.from({ length: 25 }).map((_, i) => ({
+            id: `t${seenOffsets.size}-${i}`,
+            userId: 'u1',
+            accountId: 'a1',
+            categoryId: 'c1',
+            merchant: `M${i}`,
+            amountCents: 1000 * (i + 1),
+            occurredAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            status: 'CATEGORIZED',
+            notes: null,
+          })),
+        );
+      }),
+    );
+    wrap(<TransactionsPage apiBaseUrl={BASE} />, '/transactions');
+    await waitFor(() => {
+      const range = screen.getByTestId('transactions-range');
+      expect(range.textContent).toMatch(/1–25/);
+    });
+    const next = screen.getByTestId('pagination-next') as HTMLButtonElement;
+    expect(next).not.toBeDisabled();
+    await act(async () => {
+      next.click();
+    });
+    await waitFor(() => {
+      const offsets = [...seenOffsets];
+      expect(offsets).toContain('0');
+      expect(offsets).toContain('25');
+    });
+  });
+
   it('AccountsPage renders the RELACIÓN DE CUENTAS kicker', async () => {
     wrap(<AccountsPage apiBaseUrl={BASE} />, '/accounts');
     const header = await screen.findByTestId('accounts-page-header');
@@ -78,6 +156,12 @@ describe('Editorial page headers', () => {
     wrap(<AccountsPage apiBaseUrl={BASE} />, '/accounts');
     const count = await screen.findByTestId('row-count');
     expect(count.textContent).toMatch(/N.º \d+ · CUENTAS/);
+  });
+
+  it('AccountsPage renders the Spanish "Mis cuentas" heading', async () => {
+    wrap(<AccountsPage apiBaseUrl={BASE} />, '/accounts');
+    const header = await screen.findByTestId('accounts-page-header');
+    expect(header.textContent).toMatch(/Mis cuentas/);
   });
 
   it('UsersAdminPage renders the DIRECTORIO kicker', async () => {

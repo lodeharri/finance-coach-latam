@@ -34,7 +34,7 @@ export function UsersAdminPage({ apiBaseUrl }: UsersAdminPageProps) {
           DIRECTORIO · USUARIOS
         </span>
         <div className="flex items-baseline justify-between gap-4">
-          <h1 className="font-display text-2xl font-bold text-ink-tinta">Users</h1>
+          <h1 className="font-display text-2xl font-bold text-ink-tinta">Usuarios</h1>
           <span
             className="font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta-mute"
             data-testid="row-count"
@@ -68,7 +68,7 @@ export function UsersAdminPage({ apiBaseUrl }: UsersAdminPageProps) {
         >
           <p className="font-display text-lg italic text-ink-tinta">Ningún usuario aún.</p>
           <p className="mt-1 font-body text-sm text-ink-tinta-soft">
-            Invite the first user to populate the directory.
+            Invita al primer usuario para poblar el directorio.
           </p>
         </section>
       ) : null}
@@ -77,7 +77,7 @@ export function UsersAdminPage({ apiBaseUrl }: UsersAdminPageProps) {
           <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-tinta-mute">
             * * *&nbsp;&nbsp;NUEVO USUARIO
           </span>
-          <h2 className="font-display text-lg font-bold text-ink-tinta">Add a new user</h2>
+          <h2 className="font-display text-lg font-bold text-ink-tinta">Agregar usuario</h2>
         </header>
         <UserForm apiBaseUrl={apiBaseUrl} />
       </section>

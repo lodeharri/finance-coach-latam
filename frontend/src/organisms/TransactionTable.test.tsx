@@ -106,12 +106,12 @@ describe('TransactionTable', () => {
       />,
     );
     await waitFor(() => expect(screen.getByTestId('transaction-table')).toBeInTheDocument());
-    expect(screen.getByText('CATEGORIZED')).toBeInTheDocument();
-    expect(screen.getByText('PENDING')).toBeInTheDocument();
-    expect(screen.getByText('FAILED')).toBeInTheDocument();
+    expect(screen.getByText('CATEGORIZADO')).toBeInTheDocument();
+    expect(screen.getByText('PENDIENTE')).toBeInTheDocument();
+    expect(screen.getByText('FALLIDO')).toBeInTheDocument();
   });
 
-  it('renders the Recategorize button only for PENDING|FAILED rows', async () => {
+  it('renders the Recategorizar button only for PENDING|FAILED rows', async () => {
     wrap(
       <TransactionTable
         apiBaseUrl={BASE}
@@ -122,11 +122,11 @@ describe('TransactionTable', () => {
       />,
     );
     await waitFor(() => expect(screen.getByTestId('transaction-table')).toBeInTheDocument());
-    const buttons = screen.getAllByRole('button', { name: /recategorize/i });
+    const buttons = screen.getAllByRole('button', { name: /recategorizar/i });
     expect(buttons).toHaveLength(1);
   });
 
-  it('renders currency-formatted amount via AmountText (es-AR ARS)', async () => {
+  it('renders currency-formatted amount via AmountText (es-CO COP)', async () => {
     wrap(
       <TransactionTable
         apiBaseUrl={BASE}
@@ -137,8 +137,8 @@ describe('TransactionTable', () => {
       />,
     );
     await waitFor(() => expect(screen.getByTestId('transaction-table')).toBeInTheDocument());
-    // 420000 cents = $ 4.200,00 in es-AR ARS (currency symbol with a non-breaking space).
-    expect(screen.getByText(/4\.200,00/)).toBeInTheDocument();
+    // 420000 cents = $ 4.200 in es-CO COP (Intl auto-formats with or without trailing decimals).
+    expect(screen.getByText(/4\.200/)).toBeInTheDocument();
   });
 
   it('clicking the category pill opens the override dropdown', async () => {
@@ -152,11 +152,11 @@ describe('TransactionTable', () => {
       />,
     );
     await waitFor(() => expect(screen.getByText('Transporte')).toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: /change category for pedidosya/i }));
+    fireEvent.click(screen.getByRole('button', { name: /cambiar categoría de pedidosya/i }));
     await waitFor(() => expect(screen.getByRole('listbox')).toBeInTheDocument());
   });
 
-  it('clicking Recategorize invokes onRecategorize with the row id', async () => {
+  it('clicking Recategorizar invokes onRecategorize with the row id', async () => {
     let captured: string | undefined;
     wrap(
       <TransactionTable
@@ -168,7 +168,7 @@ describe('TransactionTable', () => {
       />,
     );
     await waitFor(() => expect(screen.getByTestId('transaction-table')).toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: /recategorize/i }));
+    fireEvent.click(screen.getByRole('button', { name: /recategorizar/i }));
     expect(captured).toBe('t1');
   });
 

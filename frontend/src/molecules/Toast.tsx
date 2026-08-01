@@ -57,13 +57,13 @@ export function Toast({
           onClick={() => onRetry(id)}
           className="rounded-sm bg-ink-paper px-2 py-1 font-mono text-xs uppercase tracking-wide text-ink-tinta hover:bg-ink-paper-lift focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-cobalto"
         >
-          Retry
+          Reintentar
         </button>
       ) : null}
       <button
         type="button"
         onClick={() => onDismiss(id)}
-        aria-label="Close"
+        aria-label="Cerrar"
         className="rounded-sm px-2 py-1 font-mono text-xs uppercase tracking-wide opacity-80 hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-cobalto"
       >
         ×

@@ -6,8 +6,8 @@
  * via the motion tokens.
  *
  * Editorial: mono caps tracking-2em on the masthead, paper-press background.
- * Active voice copy: "Sign out" — NOT "Logout". The label reads as an
- * imperative the user controls, not jargon.
+ * Active voice copy: "Cerrar sesión" — an imperative the user controls, not
+ * jargon.
  */
 import { useNavigate } from 'react-router-dom';
 import { sessionStore } from '@/stores/sessionStore';
@@ -30,9 +30,9 @@ export function LogoutButton({ className = '' }: { className?: string }) {
       type="button"
       onClick={handleClick}
       className={`${BASE_CLASSES} ${className}`.trim()}
-      aria-label="Sign out of your account"
+      aria-label="Cerrar sesión de tu cuenta"
     >
-      Sign out
+      Cerrar sesión
     </button>
   );
 }

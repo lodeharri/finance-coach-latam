@@ -41,7 +41,7 @@ export function AccountsPage({ apiBaseUrl }: AccountsPageProps) {
         </span>
         <div className="flex items-baseline justify-between gap-4">
           <h1 className="font-display text-2xl font-bold text-ink-tinta">
-            {isAdminTarget ? `Accounts for ${userId}` : 'My accounts'}
+            {isAdminTarget ? `Cuentas de ${userId}` : 'Mis cuentas'}
           </h1>
           <span
             className="font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta-mute"
@@ -58,10 +58,10 @@ export function AccountsPage({ apiBaseUrl }: AccountsPageProps) {
               N.º
             </th>
             <th scope="col" className="py-2 pr-4 font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta">
-              Name
+              Nombre
             </th>
             <th scope="col" className="py-2 pr-4 font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta">
-              Type
+              Tipo
             </th>
           </tr>
         </thead>
@@ -96,7 +96,7 @@ export function AccountsPage({ apiBaseUrl }: AccountsPageProps) {
         >
           <p className="font-display text-lg italic text-ink-tinta">Ninguna cuenta aún.</p>
           <p className="mt-1 font-body text-sm text-ink-tinta-soft">
-            Add your first account to start logging transactions.
+            Agrega tu primera cuenta para empezar a registrar movimientos.
           </p>
         </section>
       ) : null}
@@ -105,7 +105,7 @@ export function AccountsPage({ apiBaseUrl }: AccountsPageProps) {
           <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-tinta-mute">
             * * *&nbsp;&nbsp;NUEVA CUENTA
           </span>
-          <h2 className="font-display text-lg font-bold text-ink-tinta">Add a new account</h2>
+          <h2 className="font-display text-lg font-bold text-ink-tinta">Agregar cuenta</h2>
         </header>
         <AccountForm apiBaseUrl={apiBaseUrl} userId={userId} />
       </section>

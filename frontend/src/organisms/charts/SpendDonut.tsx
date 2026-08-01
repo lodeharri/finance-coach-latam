@@ -79,7 +79,7 @@ export function SpendDonut({ data, width = 320, height = 240 }: SpendDonutProps)
               ))}
             </Pie>
             <Tooltip
-              formatter={(value) => Number(value ?? 0).toLocaleString('es-AR')}
+              formatter={(value) => Number(value ?? 0).toLocaleString('es-CO')}
               separator=" — "
             />
           </PieChart>

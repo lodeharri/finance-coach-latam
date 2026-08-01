@@ -79,10 +79,16 @@ export function createTransactionsRoutes(
         if (limit !== undefined && (!Number.isInteger(limit) || limit < 1 || limit > MAX_LIST_LIMIT)) {
           throw new HttpError(400, `limit must be an integer between 1 and ${MAX_LIST_LIMIT}`);
         }
+        const rawOffset = event.queryStringParameters?.offset;
+        const offset = rawOffset === undefined ? undefined : Number(rawOffset);
+        if (offset !== undefined && (!Number.isInteger(offset) || offset < 0)) {
+          throw new HttpError(400, 'offset must be a non-negative integer');
+        }
         const transactions = await deps.listTransactionsByUserUseCase.execute({
           actor,
           userId,
           limit,
+          offset,
         });
         return jsonResponse(200, transactions, event);
       }

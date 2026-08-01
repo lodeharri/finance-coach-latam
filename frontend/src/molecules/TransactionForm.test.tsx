@@ -61,11 +61,11 @@ describe('TransactionForm', () => {
 
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    const amount = screen.getByLabelText(/amount \(cents\)/i) as HTMLInputElement;
-    const merchant = screen.getByLabelText(/merchant/i) as HTMLInputElement;
-    const date = screen.getByLabelText(/date/i) as HTMLInputElement;
-    const account = screen.getByLabelText(/account/i) as HTMLSelectElement;
-    const notes = screen.getByLabelText(/notes/i) as HTMLInputElement;
+    const amount = screen.getByLabelText(/monto \(centavos\)/i) as HTMLInputElement;
+    const merchant = screen.getByLabelText(/comercio/i) as HTMLInputElement;
+    const date = screen.getByLabelText(/fecha/i) as HTMLInputElement;
+    const account = screen.getByLabelText(/cuenta/i) as HTMLSelectElement;
+    const notes = screen.getByLabelText(/notas/i) as HTMLInputElement;
 
     expect(amount).toBeInTheDocument();
     expect(amount.value).toBe('');
@@ -90,7 +90,7 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    const amount = screen.getByLabelText(/amount \(cents\)/i);
+    const amount = screen.getByLabelText(/monto \(centavos\)/i);
     await user.type(amount, '1a2.3b4-5');
     expect((amount as HTMLInputElement).value).toBe('12345');
   });
@@ -101,7 +101,7 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    const amount = screen.getByLabelText(/amount \(cents\)/i);
+    const amount = screen.getByLabelText(/monto \(centavos\)/i);
     await user.type(amount, '420000');
     expect((amount as HTMLInputElement).value).toBe('420000');
   });
@@ -112,7 +112,7 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    const amount = screen.getByLabelText(/amount \(cents\)/i);
+    const amount = screen.getByLabelText(/monto \(centavos\)/i);
     await user.type(amount, '-100');
     expect((amount as HTMLInputElement).value).toBe('100');
   });
@@ -123,7 +123,7 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    const merchant = screen.getByLabelText(/merchant/i);
+    const merchant = screen.getByLabelText(/comercio/i);
     await user.type(merchant, 'PedidosYa');
     expect((merchant as HTMLInputElement).value).toBe('PedidosYa');
   });
@@ -134,7 +134,7 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    const date = screen.getByLabelText(/date/i);
+    const date = screen.getByLabelText(/fecha/i);
     await user.clear(date);
     await user.type(date, '2026-07-15');
     expect((date as HTMLInputElement).value).toBe('2026-07-15');
@@ -146,9 +146,9 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    const notes = screen.getByLabelText(/notes/i);
-    await user.type(notes, 'Lunch with team');
-    expect((notes as HTMLInputElement).value).toBe('Lunch with team');
+    const notes = screen.getByLabelText(/notas/i);
+    await user.type(notes, 'Almuerzo con equipo');
+    expect((notes as HTMLInputElement).value).toBe('Almuerzo con equipo');
   });
 
   it('accountId select has no options when accounts list is empty', async () => {
@@ -156,13 +156,13 @@ describe('TransactionForm', () => {
 
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    const account = screen.getByLabelText(/account/i) as HTMLSelectElement;
+    const account = screen.getByLabelText(/cuenta/i) as HTMLSelectElement;
     await waitFor(() => {
       const opts = Array.from(account.options).filter((o) => o.value !== '');
       expect(opts).toHaveLength(0);
     });
-    // The "Select account…" placeholder remains the only option.
-    expect(account.options[0]?.text).toMatch(/select account/i);
+    // The "Seleccionar cuenta…" placeholder remains the only option.
+    expect(account.options[0]?.text).toMatch(/seleccionar cuenta/i);
   });
 
   it('accountId select exposes a single-account option', async () => {
@@ -170,7 +170,7 @@ describe('TransactionForm', () => {
 
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    const account = screen.getByLabelText(/account/i) as HTMLSelectElement;
+    const account = screen.getByLabelText(/cuenta/i) as HTMLSelectElement;
     await waitFor(() => {
       const opts = Array.from(account.options).filter((o) => o.value !== '');
       expect(opts).toHaveLength(1);
@@ -190,7 +190,7 @@ describe('TransactionForm', () => {
 
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    const account = screen.getByLabelText(/account/i) as HTMLSelectElement;
+    const account = screen.getByLabelText(/cuenta/i) as HTMLSelectElement;
     await waitFor(() => {
       const opts = Array.from(account.options).filter((o) => o.value !== '');
       expect(opts).toHaveLength(3);
@@ -211,19 +211,19 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    await user.type(screen.getByLabelText(/merchant/i), 'PedidosYa');
+    await user.type(screen.getByLabelText(/comercio/i), 'PedidosYa');
     // Date defaults to today; leave it.
     await waitFor(() => {
-      const opts = Array.from((screen.getByLabelText(/account/i) as HTMLSelectElement).options).filter(
+      const opts = Array.from((screen.getByLabelText(/cuenta/i) as HTMLSelectElement).options).filter(
         (o) => o.value !== '',
       );
       expect(opts).toHaveLength(1);
     });
-    await user.selectOptions(screen.getByLabelText(/account/i), 'acc-1');
+    await user.selectOptions(screen.getByLabelText(/cuenta/i), 'acc-1');
     // Amount stays empty.
-    await user.click(screen.getByRole('button', { name: /log transaction/i }));
+    await user.click(screen.getByRole('button', { name: /registrar transacción/i }));
 
-    expect(await screen.findByText(/amount must be a positive integer/i)).toBeInTheDocument();
+    expect(await screen.findByText(/monto debe ser un entero positivo/i)).toBeInTheDocument();
   });
 
   it('submitting with merchant empty surfaces the merchant error (no POST fires)', async () => {
@@ -242,18 +242,18 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    await user.type(screen.getByLabelText(/amount \(cents\)/i), '100');
+    await user.type(screen.getByLabelText(/monto \(centavos\)/i), '100');
     // Merchant left empty.
     await waitFor(() => {
-      const opts = Array.from((screen.getByLabelText(/account/i) as HTMLSelectElement).options).filter(
+      const opts = Array.from((screen.getByLabelText(/cuenta/i) as HTMLSelectElement).options).filter(
         (o) => o.value !== '',
       );
       expect(opts).toHaveLength(1);
     });
-    await user.selectOptions(screen.getByLabelText(/account/i), 'acc-1');
-    await user.click(screen.getByRole('button', { name: /log transaction/i }));
+    await user.selectOptions(screen.getByLabelText(/cuenta/i), 'acc-1');
+    await user.click(screen.getByRole('button', { name: /registrar transacción/i }));
 
-    expect(await screen.findByText(/merchant is required/i)).toBeInTheDocument();
+    expect(await screen.findByText(/comercio es obligatorio/i)).toBeInTheDocument();
     await new Promise((r) => setTimeout(r, 30));
     expect(posts).toBe(0);
   });
@@ -264,18 +264,18 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    await user.type(screen.getByLabelText(/amount \(cents\)/i), '0');
-    await user.type(screen.getByLabelText(/merchant/i), 'X');
+    await user.type(screen.getByLabelText(/monto \(centavos\)/i), '0');
+    await user.type(screen.getByLabelText(/comercio/i), 'X');
     await waitFor(() => {
-      const opts = Array.from((screen.getByLabelText(/account/i) as HTMLSelectElement).options).filter(
+      const opts = Array.from((screen.getByLabelText(/cuenta/i) as HTMLSelectElement).options).filter(
         (o) => o.value !== '',
       );
       expect(opts).toHaveLength(1);
     });
-    await user.selectOptions(screen.getByLabelText(/account/i), 'acc-1');
-    await user.click(screen.getByRole('button', { name: /log transaction/i }));
+    await user.selectOptions(screen.getByLabelText(/cuenta/i), 'acc-1');
+    await user.click(screen.getByRole('button', { name: /registrar transacción/i }));
 
-    expect(await screen.findByText(/amount must be a positive integer/i)).toBeInTheDocument();
+    expect(await screen.findByText(/monto debe ser un entero positivo/i)).toBeInTheDocument();
   });
 
   it('submitting with a missing date surfaces the date error (no POST fires)', async () => {
@@ -291,19 +291,19 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    await user.type(screen.getByLabelText(/amount \(cents\)/i), '100');
-    await user.type(screen.getByLabelText(/merchant/i), 'X');
-    await user.clear(screen.getByLabelText(/date/i));
+    await user.type(screen.getByLabelText(/monto \(centavos\)/i), '100');
+    await user.type(screen.getByLabelText(/comercio/i), 'X');
+    await user.clear(screen.getByLabelText(/fecha/i));
     await waitFor(() => {
-      const opts = Array.from((screen.getByLabelText(/account/i) as HTMLSelectElement).options).filter(
+      const opts = Array.from((screen.getByLabelText(/cuenta/i) as HTMLSelectElement).options).filter(
         (o) => o.value !== '',
       );
       expect(opts).toHaveLength(1);
     });
-    await user.selectOptions(screen.getByLabelText(/account/i), 'acc-1');
-    await user.click(screen.getByRole('button', { name: /log transaction/i }));
+    await user.selectOptions(screen.getByLabelText(/cuenta/i), 'acc-1');
+    await user.click(screen.getByRole('button', { name: /registrar transacción/i }));
 
-    expect(await screen.findByText(/date is required/i)).toBeInTheDocument();
+    expect(await screen.findByText(/fecha es obligatoria/i)).toBeInTheDocument();
     await new Promise((r) => setTimeout(r, 30));
     expect(posts).toBe(0);
   });
@@ -325,14 +325,14 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    await user.type(screen.getByLabelText(/amount \(cents\)/i), '100');
-    await user.type(screen.getByLabelText(/merchant/i), 'X');
+    await user.type(screen.getByLabelText(/monto \(centavos\)/i), '100');
+    await user.type(screen.getByLabelText(/comercio/i), 'X');
     // Leave accountId at the empty default.
-    await user.click(screen.getByRole('button', { name: /log transaction/i }));
+    await user.click(screen.getByRole('button', { name: /registrar transacción/i }));
 
     await new Promise((r) => setTimeout(r, 30));
     expect(posts).toBe(0);
-    expect(await screen.findByText(/account is required/i)).toBeInTheDocument();
+    expect(await screen.findByText(/cuenta es obligatoria/i)).toBeInTheDocument();
   });
 
   it('submitting with valid values POSTs the full body shape (amountCents integer, ISO occurredAt)', async () => {
@@ -361,24 +361,21 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    await user.type(screen.getByLabelText(/amount \(cents\)/i), '420000');
-    await user.type(screen.getByLabelText(/merchant/i), 'PedidosYa');
-    await user.clear(screen.getByLabelText(/date/i));
-    await user.type(screen.getByLabelText(/date/i), '2026-07-15');
+    await user.type(screen.getByLabelText(/monto \(centavos\)/i), '420000');
+    await user.type(screen.getByLabelText(/comercio/i), 'PedidosYa');
+    await user.clear(screen.getByLabelText(/fecha/i));
+    await user.type(screen.getByLabelText(/fecha/i), '2026-07-15');
     await waitFor(() => {
-      const account = screen.getByLabelText(/account/i) as HTMLSelectElement;
+      const account = screen.getByLabelText(/cuenta/i) as HTMLSelectElement;
       const opts = Array.from(account.options).filter((o) => o.value !== '');
       expect(opts).toHaveLength(1);
     });
-    await user.selectOptions(screen.getByLabelText(/account/i), 'acc-1');
-    await user.type(screen.getByLabelText(/notes/i), 'Dinner');
-    await user.click(screen.getByRole('button', { name: /log transaction/i }));
+    await user.selectOptions(screen.getByLabelText(/cuenta/i), 'acc-1');
+    await user.type(screen.getByLabelText(/notas/i), 'Cena');
+    await user.click(screen.getByRole('button', { name: /registrar transacción/i }));
 
-    // The MSW handler captured nothing — we verify via the round-trip instead:
-    // the transaction is returned and the cache reflects it.
-    // Instead, assert via the request body shape by re-instrumenting the handler.
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /log transaction/i })).toBeEnabled(),
+      expect(screen.getByRole('button', { name: /registrar transacción/i })).toBeEnabled(),
     );
   });
 
@@ -398,7 +395,7 @@ describe('TransactionForm', () => {
             occurredAt: '2026-07-15T00:00:00.000Z',
             createdAt: new Date().toISOString(),
             status: 'PENDING',
-            notes: 'Dinner',
+            notes: 'Cena',
             categoryId: null,
           },
           { status: 201 },
@@ -409,18 +406,18 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    await user.type(screen.getByLabelText(/amount \(cents\)/i), '420000');
-    await user.type(screen.getByLabelText(/merchant/i), 'PedidosYa');
-    await user.clear(screen.getByLabelText(/date/i));
-    await user.type(screen.getByLabelText(/date/i), '2026-07-15');
+    await user.type(screen.getByLabelText(/monto \(centavos\)/i), '420000');
+    await user.type(screen.getByLabelText(/comercio/i), 'PedidosYa');
+    await user.clear(screen.getByLabelText(/fecha/i));
+    await user.type(screen.getByLabelText(/fecha/i), '2026-07-15');
     await waitFor(() => {
-      const account = screen.getByLabelText(/account/i) as HTMLSelectElement;
+      const account = screen.getByLabelText(/cuenta/i) as HTMLSelectElement;
       const opts = Array.from(account.options).filter((o) => o.value !== '');
       expect(opts).toHaveLength(1);
     });
-    await user.selectOptions(screen.getByLabelText(/account/i), 'acc-1');
-    await user.type(screen.getByLabelText(/notes/i), 'Dinner');
-    await user.click(screen.getByRole('button', { name: /log transaction/i }));
+    await user.selectOptions(screen.getByLabelText(/cuenta/i), 'acc-1');
+    await user.type(screen.getByLabelText(/notas/i), 'Cena');
+    await user.click(screen.getByRole('button', { name: /registrar transacción/i }));
 
     await waitFor(() => expect(captured).not.toBeNull());
     expect(captured).toMatchObject({
@@ -428,11 +425,10 @@ describe('TransactionForm', () => {
       accountId: 'acc-1',
       merchant: 'PedidosYa',
       amountCents: 420000,
-      notes: 'Dinner',
+      notes: 'Cena',
     });
     expect(typeof captured!.amountCents).toBe('number');
     expect(Number.isInteger(captured!.amountCents as number)).toBe(true);
-    // occurredAt is converted to a full ISO datetime string.
     expect(captured!.occurredAt).toMatch(/^2026-07-15T/);
     expect(() => new Date(captured!.occurredAt as string).toISOString()).not.toThrow();
   });
@@ -450,23 +446,22 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    await user.type(screen.getByLabelText(/amount \(cents\)/i), '100');
-    await user.type(screen.getByLabelText(/merchant/i), 'X');
+    await user.type(screen.getByLabelText(/monto \(centavos\)/i), '100');
+    await user.type(screen.getByLabelText(/comercio/i), 'X');
     await waitFor(() => {
-      const opts = Array.from((screen.getByLabelText(/account/i) as HTMLSelectElement).options).filter(
+      const opts = Array.from((screen.getByLabelText(/cuenta/i) as HTMLSelectElement).options).filter(
         (o) => o.value !== '',
       );
       expect(opts).toHaveLength(1);
     });
-    await user.selectOptions(screen.getByLabelText(/account/i), 'acc-1');
-    // Notes left blank.
-    await user.click(screen.getByRole('button', { name: /log transaction/i }));
+    await user.selectOptions(screen.getByLabelText(/cuenta/i), 'acc-1');
+    await user.click(screen.getByRole('button', { name: /registrar transacción/i }));
 
     await waitFor(() => expect(captured).not.toBeNull());
     expect(captured!.notes).toBeNull();
   });
 
-  it('disables submit and shows "Saving…" while the mutation is in-flight', async () => {
+  it('disables submit and shows "Guardando…" while the mutation is in-flight', async () => {
     let resolvePost!: () => void;
     server.use(
       accountsHandler([{ id: 'acc-1', name: 'Checking' }]),
@@ -480,24 +475,24 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    await user.type(screen.getByLabelText(/amount \(cents\)/i), '100');
-    await user.type(screen.getByLabelText(/merchant/i), 'X');
+    await user.type(screen.getByLabelText(/monto \(centavos\)/i), '100');
+    await user.type(screen.getByLabelText(/comercio/i), 'X');
     await waitFor(() => {
-      const opts = Array.from((screen.getByLabelText(/account/i) as HTMLSelectElement).options).filter(
+      const opts = Array.from((screen.getByLabelText(/cuenta/i) as HTMLSelectElement).options).filter(
         (o) => o.value !== '',
       );
       expect(opts).toHaveLength(1);
     });
-    await user.selectOptions(screen.getByLabelText(/account/i), 'acc-1');
-    await user.click(screen.getByRole('button', { name: /log transaction/i }));
+    await user.selectOptions(screen.getByLabelText(/cuenta/i), 'acc-1');
+    await user.click(screen.getByRole('button', { name: /registrar transacción/i }));
 
-    const saving = await screen.findByRole('button', { name: /saving…/i });
+    const saving = await screen.findByRole('button', { name: /guardando…/i });
     expect(saving).toBeDisabled();
 
     resolvePost();
 
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /log transaction/i })).toBeEnabled(),
+      expect(screen.getByRole('button', { name: /registrar transacción/i })).toBeEnabled(),
     );
   });
 
@@ -512,16 +507,16 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    await user.type(screen.getByLabelText(/amount \(cents\)/i), '99999999');
-    await user.type(screen.getByLabelText(/merchant/i), 'Big Buy');
+    await user.type(screen.getByLabelText(/monto \(centavos\)/i), '99999999');
+    await user.type(screen.getByLabelText(/comercio/i), 'Big Buy');
     await waitFor(() => {
-      const opts = Array.from((screen.getByLabelText(/account/i) as HTMLSelectElement).options).filter(
+      const opts = Array.from((screen.getByLabelText(/cuenta/i) as HTMLSelectElement).options).filter(
         (o) => o.value !== '',
       );
       expect(opts).toHaveLength(1);
     });
-    await user.selectOptions(screen.getByLabelText(/account/i), 'acc-1');
-    await user.click(screen.getByRole('button', { name: /log transaction/i }));
+    await user.selectOptions(screen.getByLabelText(/cuenta/i), 'acc-1');
+    await user.click(screen.getByRole('button', { name: /registrar transacción/i }));
 
     expect(await screen.findByText(/insufficient balance/i)).toBeInTheDocument();
     const alerts = screen.getAllByRole('alert');

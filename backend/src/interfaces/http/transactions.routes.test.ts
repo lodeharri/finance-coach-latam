@@ -383,3 +383,95 @@ describe('GET /transactions list limit validation', () => {
     });
   });
 });
+
+describe('GET /transactions offset query param', () => {
+  let listTransactionsByUserUseCase: ListTransactionsByUserUseCase;
+  let handler: ReturnType<typeof createTransactionsRoutes>;
+
+  beforeEach(() => {
+    listTransactionsByUserUseCase = {
+      execute: vi.fn().mockResolvedValue([]),
+    } as unknown as ListTransactionsByUserUseCase;
+    handler = createTransactionsRoutes({
+      createTransactionUseCase: { execute: vi.fn() } as unknown as CreateTransactionUseCase,
+      categorizeTransactionUseCase: { execute: vi.fn() } as unknown as CategorizeTransactionUseCase,
+      listTransactionsByUserUseCase,
+      updateTransactionCategoryUseCase: { execute: vi.fn() } as unknown as UpdateTransactionCategoryUseCase,
+    });
+  });
+
+  it('forwards offset=0 to the use case when limit is provided', async () => {
+    const result = await handler(
+      makeEvent(null, 'GET', ownerClaims, '/transactions', {
+        limit: '25',
+        offset: '0',
+        userId: 'user-1',
+      }),
+    );
+    expect(result.statusCode).toBe(200);
+    expect(listTransactionsByUserUseCase.execute).toHaveBeenCalledWith({
+      actor: ownerActor,
+      userId: 'user-1',
+      limit: 25,
+      offset: 0,
+    });
+  });
+
+  it('forwards offset=50 to the use case (second page with PAGE_SIZE=25)', async () => {
+    const result = await handler(
+      makeEvent(null, 'GET', ownerClaims, '/transactions', {
+        limit: '25',
+        offset: '50',
+        userId: 'user-1',
+      }),
+    );
+    expect(result.statusCode).toBe(200);
+    expect(listTransactionsByUserUseCase.execute).toHaveBeenCalledWith({
+      actor: ownerActor,
+      userId: 'user-1',
+      limit: 25,
+      offset: 50,
+    });
+  });
+
+  it('passes offset as undefined when omitted (back-compat with existing callers)', async () => {
+    const result = await handler(
+      makeEvent(null, 'GET', ownerClaims, '/transactions', { limit: '50', userId: 'user-1' }),
+    );
+    expect(result.statusCode).toBe(200);
+    expect(listTransactionsByUserUseCase.execute).toHaveBeenCalledWith({
+      actor: ownerActor,
+      userId: 'user-1',
+      limit: 50,
+      offset: undefined,
+    });
+  });
+
+  it('rejects a negative offset', async () => {
+    const result = await handler(
+      makeEvent(null, 'GET', ownerClaims, '/transactions', {
+        limit: '25',
+        offset: '-1',
+        userId: 'user-1',
+      }),
+    );
+    expect(result.statusCode).toBe(400);
+    expect(bodyOf(result)).toEqual({
+      error: 'offset must be a non-negative integer',
+    });
+  });
+
+  it('rejects a non-integer offset', async () => {
+    const result = await handler(
+      makeEvent(null, 'GET', ownerClaims, '/transactions', {
+        limit: '25',
+        offset: 'abc',
+        userId: 'user-1',
+      }),
+    );
+    expect(result.statusCode).toBe(400);
+    expect(bodyOf(result)).toEqual({
+      error: 'offset must be a non-negative integer',
+    });
+  });
+});

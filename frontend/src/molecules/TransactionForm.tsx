@@ -59,11 +59,11 @@ export function TransactionForm({ apiBaseUrl, userId }: TransactionFormProps) {
     const next: FormErrors = {};
     const cents = Number(amount);
     if (!amount || !Number.isInteger(cents) || cents <= 0) {
-      next.amount = 'Amount must be a positive integer (cents).';
+      next.amount = 'El monto debe ser un entero positivo (centavos).';
     }
-    if (!merchant.trim()) next.merchant = 'Merchant is required.';
-    if (!occurredAt) next.occurredAt = 'Date is required.';
-    if (!accountId) next.accountId = 'Account is required.';
+    if (!merchant.trim()) next.merchant = 'El comercio es obligatorio.';
+    if (!occurredAt) next.occurredAt = 'La fecha es obligatoria.';
+    if (!accountId) next.accountId = 'La cuenta es obligatoria.';
     if (Object.keys(next).length > 0) {
       setErrors(next);
       return;
@@ -80,7 +80,7 @@ export function TransactionForm({ apiBaseUrl, userId }: TransactionFormProps) {
       },
       {
         onError: (err) => {
-          setErrors({ form: err instanceof Error ? err.message : 'Could not create transaction.' });
+          setErrors({ form: err instanceof Error ? err.message : 'No se pudo crear la transacción.' });
         },
       },
     );
@@ -90,7 +90,7 @@ export function TransactionForm({ apiBaseUrl, userId }: TransactionFormProps) {
     <form onSubmit={submit} noValidate className="flex flex-col gap-5" data-testid="transaction-form">
       <FormField
         id="tx-merchant"
-        label="Merchant"
+        label="Comercio"
         variant="editorial"
         value={merchant}
         onChange={(e) => setMerchant(e.target.value)}
@@ -100,7 +100,7 @@ export function TransactionForm({ apiBaseUrl, userId }: TransactionFormProps) {
       />
       <FormField
         id="tx-occurredAt"
-        label="Date"
+        label="Fecha"
         type="text"
         variant="editorial"
         value={occurredAt}
@@ -114,7 +114,7 @@ export function TransactionForm({ apiBaseUrl, userId }: TransactionFormProps) {
           htmlFor="tx-account"
           className="block font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta-soft"
         >
-          Account
+          Cuenta
         </label>
         <select
           id="tx-account"
@@ -123,7 +123,7 @@ export function TransactionForm({ apiBaseUrl, userId }: TransactionFormProps) {
           className="border-0 border-b border-ink-tinta bg-transparent px-0 py-2 font-body text-lg text-ink-tinta focus:border-ink-cobalto-deep focus:outline-none focus-visible:ring-0"
           required
         >
-          <option value="">Select account…</option>
+          <option value="">Seleccionar cuenta…</option>
           {accounts.data?.map((a) => (
             <option key={a.id} value={a.id}>
               {a.name}
@@ -142,7 +142,7 @@ export function TransactionForm({ apiBaseUrl, userId }: TransactionFormProps) {
           htmlFor="tx-amount"
           className="block font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta-soft"
         >
-          Amount (cents)
+          Monto (centavos)
         </label>
         <AmountInput
           id="tx-amount"
@@ -159,11 +159,11 @@ export function TransactionForm({ apiBaseUrl, userId }: TransactionFormProps) {
       </div>
       <FormField
         id="tx-notes"
-        label="Notes"
+        label="Notas"
         variant="editorial"
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
-        placeholder="Optional"
+        placeholder="Opcional"
         error={errors.notes}
       />
       {errors.form ? (
@@ -171,7 +171,7 @@ export function TransactionForm({ apiBaseUrl, userId }: TransactionFormProps) {
       ) : null}
       <div>
         <Button type="submit" disabled={create.isPending}>
-          {create.isPending ? 'Saving…' : 'Log transaction'}
+          {create.isPending ? 'Guardando…' : 'Registrar transacción'}
         </Button>
       </div>
     </form>

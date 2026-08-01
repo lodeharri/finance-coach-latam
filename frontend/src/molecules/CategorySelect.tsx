@@ -35,7 +35,7 @@ export function CategorySelect({ apiBaseUrl, value, onChange, disabled, defaultO
         {selected ? (
           <CategoryPill slug={selected.slug} name={selected.name} color={selected.color} />
         ) : (
-          <span className="text-ink-tinta-mute">Choose category…</span>
+          <span className="text-ink-tinta-mute">Elegir categoría…</span>
         )}
       </button>
       {open && categories ? (

@@ -63,7 +63,7 @@ describe('pages render correctly', () => {
 
   it('LoginPage renders for /login', () => {
     render(<TestRouter initialPath="/login" />);
-    expect(screen.getByRole('heading', { name: /sign in/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /iniciar sesión/i })).toBeInTheDocument();
   });
 
   it('ComingSoonPage renders for /dashboard', () => {
