@@ -21,25 +21,27 @@ export interface UseTransactionsArgs {
   apiBaseUrl: string;
   userId?: string | undefined;
   limit?: number | undefined;
+  offset?: number | undefined;
 }
 
 export function transactionsQueryKey() {
   return [...KEY];
 }
 
-function buildQuery(limit?: number, userId?: string): string {
+function buildQuery(limit?: number, userId?: string, offset?: number): string {
   const params = new URLSearchParams();
   if (limit !== undefined) params.set('limit', String(limit));
   if (userId !== undefined) params.set('userId', userId);
+  if (offset !== undefined) params.set('offset', String(offset));
   const qs = params.toString();
   return qs ? `transactions?${qs}` : 'transactions';
 }
 
-export function useTransactions({ apiBaseUrl, userId, limit }: UseTransactionsArgs) {
+export function useTransactions({ apiBaseUrl, userId, limit, offset }: UseTransactionsArgs) {
   return useQuery({
-    queryKey: [...KEY, userId ?? null, limit ?? null] as const,
+    queryKey: [...KEY, userId ?? null, limit ?? null, offset ?? null] as const,
     queryFn: async () => {
-      const res = await apiClient.get<Transaction[]>(joinUrl(apiBaseUrl, buildQuery(limit, userId)));
+      const res = await apiClient.get<Transaction[]>(joinUrl(apiBaseUrl, buildQuery(limit, userId, offset)));
       if (!res.ok) throw new Error(res.message);
       return res.data;
     },
