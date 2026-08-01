@@ -72,12 +72,7 @@ If the ceiling is hit, every build after the limit returns a quota error and the
 
 ## 5. CORS posture
 
-The backend API Gateway HTTP API v2 has `Access-Control-Allow-Origin: *`. Any site on the internet can call the API with a valid token. Bounded by:
-
-- Cognito free tier (50K MAU)
-- API Gateway throttle (100 RPS)
-
-**Acceptable for the portfolio demo.** Do **not** ship this posture to a production multi-tenant system without scoping origins to the Pages domain.
+The backend API Gateway HTTP API v2 echoes a specific `Access-Control-Allow-Origin` header per request (never `*`). Each allowed origin is configured through the `ALLOWED_ORIGINS` environment variable on the Lambda and the `allowedOrigins` CDK context on the API Gateway stage. See §14 for the configuration flow, the allow-list resolution, and the verification recipe.
 
 ## 6. `cloudflare/pages-action@v1` is DEPRECATED
 
@@ -161,3 +156,69 @@ VITE_COGNITO_REGION=us-east-1
 - [ ] Recharts integration for category breakdown (originally planned for PR4).
 - [ ] PapaParse CSV import (originally planned for PR5).
 - [ ] Bundle splitting if initial JS exceeds 200 kB gzipped (current: ~93 kB gzipped per PR4 build).
+
+## 14. CORS configuration
+
+### 14.1 Threat model
+
+`Access-Control-Allow-Origin: *` combined with the `Authorization` header is a security anti-pattern: any third-party site running in a user's browser can issue `fetch('https://api/...', { credentials: 'include' })` with a stolen token and the browser will accept the response. The fix is to scope the allow-list to the actual frontend origins (the Cloudflare Pages domain for production, `http://localhost:5173` for local Vite dev). The API Gateway preflight and the Lambda response both enforce the same allow-list so an attacker who manages to bypass one is still blocked at the other.
+
+### 14.2 Origin allow-list flow
+
+There are two independent surfaces, both seeded from the same default list `('https://finance-coach-latam.pages.dev', 'http://localhost:5173')`:
+
+| Surface | Source | Where to override |
+|---|---|---|
+| API Gateway v2 preflight (OPTIONS) | `infra/lib/finance-coach-stack.ts` reads CDK context `allowedOrigins` | `cdk deploy -c allowedOrigins=https://staging.example.com,https://prod.example.com` |
+| Lambda response (GET/POST/PATCH/DELETE) | `backend/src/infrastructure/config/env.config.ts` reads `ALLOWED_ORIGINS` env var | `ALLOWED_ORIGINS` on `ApiFunction` / `HealthHandler` / `MigrationFunction` in CDK `environment` block |
+
+Keep both lists in sync. If only one surface is updated the browser will see inconsistent preflight vs response and reject the call.
+
+### 14.3 Adding a new origin
+
+1. Decide the new origin (must include scheme, e.g. `https://staging.example.com`).
+2. For staging/prod, set the CDK context at deploy time:
+   ```bash
+   npx cdk deploy -c allowedOrigins=https://finance-coach-latam.pages.dev,https://staging.example.com,http://localhost:5173
+   ```
+3. For the Lambda response side, add the same origin to the `ALLOWED_ORIGINS` env var on every Lambda (`ApiFunction`, `HealthHandler`, `MigrationFunction`, `CategorizerFunction`) in `infra/lib/finance-coach-stack.ts`. The env var is a comma-separated CSV that is trimmed, de-duplicated, and validated at startup (`parseAllowedOrigins` rejects empty entries and any value without an `http(s)://` scheme).
+4. Redeploy and re-verify per §14.4.
+
+### 14.4 Verifying in a browser
+
+Open the SPA, then in DevTools → Network click any API request → check the response headers:
+
+```
+Access-Control-Allow-Origin: https://finance-coach-latam.pages.dev
+Vary: Origin
+```
+
+For an unknown origin (simulate by editing the `Origin` header in a curl preflight):
+
+```bash
+curl -i -X OPTIONS https://<api>.execute-api.us-east-1.amazonaws.com/health \
+  -H "Origin: https://attacker.example" \
+  -H "Access-Control-Request-Method: GET"
+```
+
+The response MUST NOT include `Access-Control-Allow-Origin` (the browser will refuse the actual response).
+
+### 14.5 Recovery — accidentally reverting to `*`
+
+If you suspect a regression, grep both surfaces from the repo root:
+
+```bash
+grep -RnE "Access-Control-Allow-Origin.*['\"]?\*['\"]?" backend/src infra/lib
+grep -RnE "allowOrigins.*\*" infra/lib
+```
+
+The only acceptable matches after this fix landed are:
+
+- `backend/src/interfaces/http/http.utils.ts` — the comment block explaining why `*` is wrong.
+- `backend/src/interfaces/http/cors.test.ts` — the test asserting `*` is never returned.
+
+Any other match is a regression: revert it, re-run `cdk synth`, and add a failing test first (TDD).
+
+### 14.6 Local dev proxy
+
+`frontend/vite.config.ts` adds a dev-only `server.proxy['/api'] → http://localhost:3000` so `npm run dev` works without the SPA ever hitting the production CORS allow-list. Production goes through Cloudflare Pages → API Gateway directly.

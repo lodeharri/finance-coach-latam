@@ -50,6 +50,6 @@ export function createApiRoutes(deps: ApiRoutesDeps): HttpRouteHandler {
     ) {
       return transactions(event);
     }
-    return jsonResponse(404, { error: 'Route not found' });
+    return jsonResponse(404, { error: 'Route not found' }, event);
   };
 }

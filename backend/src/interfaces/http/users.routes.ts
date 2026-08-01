@@ -23,7 +23,7 @@ export function createUsersRoutes(deps: UsersRoutesDeps): HttpRouteHandler {
 
       if (method === 'GET') {
         const users = await deps.listUsersUseCase.execute({ actorRole: actor.role });
-        return jsonResponse(200, users);
+        return jsonResponse(200, users, event);
       }
 
       if (method === 'POST') {
@@ -42,12 +42,12 @@ export function createUsersRoutes(deps: UsersRoutesDeps): HttpRouteHandler {
           role,
           tempPassword: requiredString(body, 'tempPassword'),
         });
-        return jsonResponse(201, user);
+        return jsonResponse(201, user, event);
       }
 
       throw new HttpError(405, `Method ${method} is not allowed on /users`);
     } catch (error) {
-      return routeError(error);
+      return routeError(error, event);
     }
   };
 }

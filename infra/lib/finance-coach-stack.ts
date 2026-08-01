@@ -19,6 +19,36 @@ export class FinanceCoachStack extends cdk.Stack {
     const geminiApiKey = process.env.GEMINI_API_KEY ?? '';
     const openaiApiKey = process.env.OPENAI_API_KEY ?? '';
 
+    // ── CORS allowed origins ────────────────────────────────────────────────
+    // Wildcard (`*`) is incompatible with the `Authorization` header that
+    // every authenticated request carries: any third-party site running in a
+    // user's browser could call the API with a stolen token. We mirror the
+    // backend Lambda allow-list at the gateway edge so the OPTIONS preflight
+    // and the actual response carry the same origin policy.
+    //
+    // Override per environment with CDK context, e.g.:
+    //   npx cdk deploy -c allowedOrigins=https://staging.example.com,https://prod.example.com
+    //
+    // Defaults match the values in `backend/src/infrastructure/config/env.config.ts`
+    // (`DEFAULT_ALLOWED_ORIGINS`) so local dev, Cloudflare Pages preview, and
+    // production agree on the same list without manual configuration.
+    const DEFAULT_ALLOWED_ORIGINS = [
+      'https://finance-coach-latam.pages.dev',
+      'http://localhost:5173',
+    ];
+    const allowedOriginsCsv =
+      (this.node.tryGetContext('allowedOrigins') as string | undefined) ?? '';
+    const allowedOrigins = (
+      allowedOriginsCsv
+        ? allowedOriginsCsv.split(',').map((o) => o.trim()).filter((o) => o.length > 0)
+        : DEFAULT_ALLOWED_ORIGINS
+    );
+    if (allowedOrigins.length === 0) {
+      throw new Error(
+        'No CORS allowed origins resolved from CDK context. Set `-c allowedOrigins=...` or accept the defaults.',
+      );
+    }
+
     const userPool = new cognito.UserPool(this, 'FinanceCoachUserPool', {
       userPoolName: 'finance-coach-latam',
       selfSignUpEnabled: false,
@@ -158,7 +188,8 @@ export class FinanceCoachStack extends cdk.Stack {
       description: 'Finance Coach LATAM HTTP API v2.',
       defaultAuthorizer: cognitoAuthorizer,
       corsPreflight: {
-        allowOrigins: ['*'],
+        // SPECIFIC origins — never `*`. See `allowedOrigins` resolution above.
+        allowOrigins: allowedOrigins,
         allowMethods: [
           apigwv2.CorsHttpMethod.GET,
           apigwv2.CorsHttpMethod.POST,
