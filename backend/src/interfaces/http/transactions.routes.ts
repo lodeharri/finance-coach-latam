@@ -1,6 +1,7 @@
 import type { CategorizeTransactionUseCase } from '../../application/use-cases/categorize-transaction.use-case';
 import type { CreateTransactionUseCase } from '../../application/use-cases/create-transaction.use-case';
 import type { ListTransactionsByUserUseCase } from '../../application/use-cases/list-transactions-by-user.use-case';
+import type { UpdateTransactionCategoryUseCase } from '../../application/use-cases/update-transaction.use-case';
 import {
   authenticate,
   HttpError,
@@ -16,6 +17,7 @@ export interface TransactionsRoutesDeps {
   readonly createTransactionUseCase: CreateTransactionUseCase;
   readonly categorizeTransactionUseCase: CategorizeTransactionUseCase;
   readonly listTransactionsByUserUseCase: ListTransactionsByUserUseCase;
+  readonly updateTransactionCategoryUseCase: UpdateTransactionCategoryUseCase;
 }
 
 export function createTransactionsRoutes(
@@ -36,6 +38,22 @@ export function createTransactionsRoutes(
           actor,
           transactionId: decodeURIComponent(categorizeMatch[1]!),
           userId,
+        });
+        return jsonResponse(200, transaction, event);
+      }
+
+      // REQ-FFC-BE-PATCH-TRANSACTION: owner/admin override on a single
+      // transaction. The use case loads by id and asserts the actor owns
+      // the row (or is admin), so a spoofed userId in the body cannot
+      // bypass the check (REQ-FFC-AUTH-TX-OWNER).
+      const updateMatch = event.rawPath.match(/^\/transactions\/([^/]+)$/);
+      if (method === 'PATCH' && updateMatch) {
+        const body = parseBody(event);
+        const categoryId = requiredString(body, 'categoryId');
+        const transaction = await deps.updateTransactionCategoryUseCase.execute({
+          actor,
+          transactionId: decodeURIComponent(updateMatch[1]!),
+          categoryId,
         });
         return jsonResponse(200, transaction, event);
       }
