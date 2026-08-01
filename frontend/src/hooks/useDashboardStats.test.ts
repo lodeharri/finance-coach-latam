@@ -53,7 +53,7 @@ describe('computeDashboardStats', () => {
     expect(stats.mtdSpendCents).toBe(150000);
   });
 
-  it('excludes PENDING and FAILED transactions from the spend total', () => {
+  it('includes CATEGORIZED + PENDING in mtdSpendCents; excludes FAILED (REL-004)', () => {
     const stats = computeDashboardStats(
       [
         tx({ id: 'a', amountCents: 100000, status: 'CATEGORIZED' }),
