@@ -112,7 +112,10 @@ describe('useAccounts', () => {
       ),
       http.post('https://api.example.test/accounts', () => {
         created = true;
-        return HttpResponse.json({ id: 'a-new' }, { status: 201 });
+        return HttpResponse.json(
+          { id: 'a-new', userId: 'u1', name: 'Checking', type: 'BANK', createdAt: new Date().toISOString() },
+          { status: 201 },
+        );
       }),
     );
 

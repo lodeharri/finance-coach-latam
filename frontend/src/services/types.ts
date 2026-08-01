@@ -10,7 +10,11 @@
  *  - User: id, email, name, tier, createdAt.
  *
  * The SPA only uses `amountCents` (integer). The backend entity field is `amount`
- * — if it ever leaks, we normalize.
+ * — if it ever leaks, `TransactionSchema` normalizes it via a `z.preprocess`
+ * step that copies the legacy `amount` value into `amountCents` before the
+ * integer check runs. This is the single source of truth for the fix at the
+ * schema layer; `apiClient` ALSO runs responses through these schemas so we
+ * get defense in depth.
  */
 import { z } from 'zod';
 
@@ -46,18 +50,40 @@ export const AccountSchema = z.object({
 });
 export type Account = z.infer<typeof AccountSchema>;
 
-export const TransactionSchema = z.object({
-  id: z.string(),
-  userId: z.string(),
-  accountId: z.string(),
-  categoryId: z.string().nullable(),
-  merchant: z.string(),
-  amountCents: z.number().int(),
-  occurredAt: IsoDateString,
-  createdAt: IsoDateString,
-  status: TransactionStatusSchema,
-  notes: z.string().nullable(),
-});
+export const TransactionSchema = z.preprocess(
+  (val) => {
+    // Normalize the legacy backend `amount` field into `amountCents` BEFORE
+    // the strict integer check. Defense in depth: apiClient also parses with
+    // this schema, but the schema alone is enough to make every consumer of
+    // TransactionSchema safe regardless of the wire shape.
+    if (val && typeof val === 'object' && val !== null) {
+      const obj = val as Record<string, unknown>;
+      if (obj.amountCents === undefined && typeof obj.amount === 'number') {
+        const { amount, ...rest } = obj;
+        return { ...rest, amountCents: amount };
+      }
+      // Even when amountCents is already present, strip the legacy field so
+      // the SPA never accidentally reads `amount` instead of `amountCents`.
+      if ('amount' in obj) {
+        const { amount: _amount, ...rest } = obj;
+        return rest;
+      }
+    }
+    return val;
+  },
+  z.object({
+    id: z.string(),
+    userId: z.string(),
+    accountId: z.string(),
+    categoryId: z.string().nullable(),
+    merchant: z.string(),
+    amountCents: z.number().int(),
+    occurredAt: IsoDateString,
+    createdAt: IsoDateString,
+    status: TransactionStatusSchema,
+    notes: z.string().nullable(),
+  }),
+);
 export type Transaction = z.infer<typeof TransactionSchema>;
 
 export const UserSchema = z.object({

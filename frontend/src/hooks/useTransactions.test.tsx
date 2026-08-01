@@ -140,7 +140,21 @@ describe('useTransactions', () => {
       }),
       http.post('https://api.example.test/transactions', () => {
         created = true;
-        return HttpResponse.json({ id: 't-new' }, { status: 201 });
+        return HttpResponse.json(
+          {
+            id: 't-new',
+            userId: 'u1',
+            accountId: 'a1',
+            categoryId: null,
+            merchant: 'M',
+            amountCents: 100,
+            occurredAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            status: 'PENDING',
+            notes: null,
+          },
+          { status: 201 },
+        );
       }),
     );
 
