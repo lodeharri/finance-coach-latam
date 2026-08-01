@@ -222,3 +222,61 @@ Any other match is a regression: revert it, re-run `cdk synth`, and add a failin
 ### 14.6 Local dev proxy
 
 `frontend/vite.config.ts` adds a dev-only `server.proxy['/api'] → http://localhost:3000` so `npm run dev` works without the SPA ever hitting the production CORS allow-list. Production goes through Cloudflare Pages → API Gateway directly.
+
+## 15. SPA endpoint surface (`frontend-flow-completion`, shipped via PRs #40 + #41 + #42)
+
+The SPA now exercises every backend CRUD endpoint that was previously only available to seeded admin tooling. URL construction goes through `joinUrl()` (`frontend/src/services/url.ts`) — no `${baseUrl}/path}` template strings remain. Every hook in `frontend/src/hooks/` routes its outgoing URL through the helper and is covered by MSW tests that assert a single-slash URL.
+
+### 15.1 Endpoints consumed
+
+| Method + path | Caller | Auth | Notes |
+|---|---|---|---|
+| `GET /categories` | `useCategories`, `SpendDonut`, `InsightsPage` | Bearer (any role) | Slice colors come from `color` field |
+| `POST /categories` | `CategoriesAdminPage` | Bearer admin | Returns 201 |
+| `PATCH /categories/{id}` | `CategoriesAdminPage` | Bearer admin | Triggers async embedding recompute |
+| `DELETE /categories/{id}` | `CategoriesAdminPage` | Bearer admin | 409 when transactions reference it |
+| `GET /accounts` | `useAccounts`, `TransactionForm` | Bearer (owner or admin via `?userId=`) | Pagination cap = 100 |
+| `POST /accounts` | `AccountForm` | Bearer (any role) | `type ∈ {BANK, CASH, CARD}` |
+| `GET /users` | `useUsers` | Bearer admin | Non-admin never mounts (router `RequireRole`) |
+| `POST /users` | `UserForm` | Bearer admin | `tier ∈ {BRONZE, SILVER, GOLD}` |
+| `GET /transactions` | `useTransactions`, `DashboardPage`, `InsightsPage` | Bearer (owner or admin via `?userId=`) | Default `limit=50`, max 100 |
+| `POST /transactions` | `TransactionForm` | Bearer (any role) | New row starts `status: PENDING` |
+| `POST /transactions/{id}/categorize` | `useRecategorizeTransaction` (Recategorize button) | Bearer (any role) | Async LLM pipeline |
+| **`PATCH /transactions/{id}`** *(new)* | `CategorySelect` dropdown override | Bearer (owner or admin) | Owner-or-admin authz runs **after** load; spoofed `userId` in body is rejected |
+
+The PATCH row is the only contract addition in this cycle. CDK is unchanged because `PATCH` and `DELETE` were widened on the API Gateway CORS preflight in `phase-6-categories-crud-patch-delete`.
+
+### 15.2 Build-time env vars
+
+| Var | Required | Source | Notes |
+|---|---|---|---|
+| `VITE_API_BASE_URL` | yes | GitHub Actions / `.env.local` | Fails fast at module load when missing (PR #37). Format: `https://<api-id>.execute-api.us-east-1.amazonaws.com` |
+| `VITE_COGNITO_USER_POOL_CLIENT_ID` | yes | GitHub secret | Safe defaults applied when unset in dev |
+| `VITE_COGNITO_REGION` | yes | GitHub secret (`AWS_REGION`) | Safe defaults applied when unset in dev |
+
+`.env.example` documents the full template. CI fails the build when `VITE_API_BASE_URL` is empty, so a missing URL never reaches production.
+
+### 15.3 Role-based route visibility
+
+| Route | `user` | `admin` | Guard |
+|---|---|---|---|
+| `/dashboard` | ✓ | ✓ | `RequireAuth` |
+| `/transactions` | ✓ | ✓ | `RequireAuth` (admin can pass `?userId=`) |
+| `/accounts` | ✓ | ✓ | `RequireAuth` (admin can pass `?userId=`) |
+| `/insights` | ✓ | ✓ | `RequireAuth` |
+| `/categories` | ✗ | ✓ | `RequireRole('admin')` |
+| `/admin/users` | ✗ | ✓ | `RequireRole('admin')` |
+
+The sidebar renders only the links the current role can access. Non-admin attempts to load an admin route render `ForbiddenPage` and the page never fires its data-fetch hooks.
+
+### 15.4 Known follow-ups
+
+| ID | Severity | Issue | Tracking |
+|---|---|---|---|
+| F1 | WARNING | **Cloudflare Pages preview CORS gap.** `feat-*.finance-coach-latam.pages.dev` preview URLs are NOT in the API Gateway or Lambda CORS allow-list. PR preview deployments will hit CORS rejection until the Lambda-side origin validator is widened to support `*.finance-coach-latam.pages.dev` patterns (see §14 for the allow-list flow). | Future change. Local dev and production URL are unaffected. |
+| F2 | WARNING | **FormField `required` forwarding bug.** `frontend/src/molecules/FormField.tsx` consumes the `required` prop but does NOT forward it to the underlying `<Input>` atom — it only renders the `*` indicator in the Label. HTML5 constraint validation never triggers on FormField-wrapped inputs. Custom form validation compensates today; recommended fix is to forward `required` plus `aria-required`, `aria-invalid`, `min`, `max`, `pattern` to the underlying input. | Future change. Custom validation prevents user-visible regressions. |
+| F3 | WARNING | **InsightsPage Δ% / Δ abs columns stubbed to 0.** `InsightsPage.tsx` lines 113–139 set `deltaPct` and `deltaAbs` to `0` because no comparison window is computed. The sortable breakdown table renders these stubs; backfilling the month-over-month comparison requires a date-range query that is currently out of scope. | Future change. |
+| F4 | WARNING | **Page-level integration tests missing for 5 pages.** `TransactionsPage`, `AccountsPage`, `UsersAdminPage`, `DashboardPage`, `InsightsPage` lack dedicated page-level integration tests. Underlying hooks and organisms are covered, but the page orchestration (loading/empty/error states, route-level guards, mock-only navigation) is not exercised end-to-end. Unit-level coverage exceeds the per-glob 80% threshold. | Future change. |
+| F5 | WARNING | **AmountText locale test is locale-tolerant.** `AmountText.test.tsx:17` uses `/12[.,]34/` regex because the runtime locale may default to `en-US` in jsdom. Spec REQ-FFC-TX-AMOUNT-DISPLAY explicitly requires `8.500,00 ARS` for `es-AR`; recommended fix is to pin the test fixture locale. | Future change. |
+| F6 | SUGGESTION | **Recharts split into 3 chunks.** `CategoricalChart-iEvTJM8V.js` (94.23 KB gz) + `MonthlySparkline-FhcSfjY_.js` (14.34 KB gz) + `SpendDonut-Cxl1qYBy.js` (6.42 KB gz) = 114.99 KB total. Could consolidate to a single chart bundle. | Future change. |
+| F7 | SUGGESTION | **Two `react-refresh/only-export-components` warnings** in `frontend/src/app/router.tsx` from the `RequireAuth` / `RequireRole` extraction. Non-blocking (exit 0). | Future change. |

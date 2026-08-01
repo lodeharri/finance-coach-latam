@@ -15,7 +15,7 @@ The full Spec-Driven Development artifacts live under [`openspec/changes/initial
 - [`design.md`](./openspec/changes/initial-poc/design.md) — Architecture diagram, components, ADRs (Hexagonal, Custom Resource, Drizzle, Gemini, RBAC)
 - [`tasks.md`](./openspec/changes/initial-poc/tasks.md) — Implementation tasks with `[x]` / `[ ]` checkboxes (62% complete)
 
-**Status:** Phases 1–6 complete. Phase 6 (frontend foundation) closed via [`openspec/changes/archive/2026-07-31-frontend-foundation/`](./openspec/changes/archive/2026-07-31-frontend-foundation/) — backend 142/142 tests, frontend 157/157 tests, 8/8 ADRs honored, Litografía del Sur aesthetic applied, $0 cost confirmed. Phase 7 (CI/CD with OIDC) pending.
+**Status:** Phases 1–6 complete. Phase 6 (frontend foundation) closed via [`openspec/changes/archive/2026-07-31-frontend-foundation/`](./openspec/changes/archive/2026-07-31-frontend-foundation/) — backend 142/142 tests, frontend 157/157 tests, 8/8 ADRs honored, Litografía del Sur aesthetic applied, $0 cost confirmed. **Phase 6b (frontend flow completion) closed via [`openspec/changes/archive/2026-07-31-frontend-flow-completion/`](./openspec/changes/archive/2026-07-31-frontend-flow-completion/)** — backend 177/177 tests, frontend 273/273 tests, 5 ADRs honored, $0 cost confirmed; `PATCH /transactions/{id}` ships with owner-or-admin authz that runs after row load. Phase 7 (CI/CD with OIDC) pending.
 
 The frontend SPA shipped through [`openspec/changes/archive/2026-07-31-frontend-foundation/`](./openspec/changes/archive/2026-07-31-frontend-foundation/) (PR1–PR5 merged as #30–#34; SDD cycle closed with PASS WITH WARNINGS, 0 CRITICAL). The SPA is auto-deployed to Cloudflare Pages on every `main` push via the `deploy-frontend` job in `.github/workflows/deploy-staging.yml` (and mirrored in `deploy-production.yml`). See `frontend/RUNBOOK.md` for the deploy procedure, secrets table, 500-builds/mo ceiling, and CORS posture.
 
@@ -143,6 +143,7 @@ For current status see [tasks.md](./openspec/changes/initial-poc/tasks.md). Summ
 - ✅ **Phase 4 — Domain entities + auth** (14/14): User/Account/Category/Transaction + Cognito + Gemini
 - 🔜 **Phase 5 — Production validation** (0/9): deploy Phase 4, verify all spec scenarios end-to-end
 - ✅ **Phase 6 — Frontend + polish (frontend foundation)** (11/11): React 18 + Vite + TS strict + Tailwind 3 SPA, Cloudflare Pages auto-deploy (`cloudflare/wrangler-action@v4`), `RUNBOOK.md`, "Litografía del Sur" design system. 5 chained PRs (#30–#34) merged stacked-to-main. Cycle closed — see [archive report](./openspec/changes/archive/2026-07-31-frontend-foundation/archive-report.md).
+- ✅ **Phase 6b — Frontend flow completion** (49/49): 3 chained PRs (#39 backend PATCH, #40 frontend flows, #41 dashboard + insights) + #42 (molecule test backfill) merged stacked-to-main. Adds `PATCH /transactions/{id}` (owner/admin authz-after-load), `joinUrl` URL helper, Transactions/Accounts/Admin Users/Dashboard/Insights pages, Recharts charts lazy-loaded, `LogoutButton` in masthead, role-aware sidebar, $0 cost confirmed. Backend 177/177, frontend 273/273, coverage 99.28% on molecules glob. Cycle closed — see [archive report](./openspec/changes/archive/2026-07-31-frontend-flow-completion/archive-report.md).
 - 🔜 **Phase 7 — CI/CD** (0/5): GitHub Actions with OIDC
 
 ### Frontend quickstart
@@ -158,6 +159,23 @@ npm run build        # vite build → dist/
 ```
 
 See `frontend/RUNBOOK.md` for secrets, deploy procedure, and operational constraints.
+
+---
+
+## SPA Routes (per role)
+
+The deployed SPA at <https://finance-coach-latam.pages.dev> exposes the following routes. The sidebar filters links by role; non-admin attempts to load an admin route render `ForbiddenPage` without firing any data-fetch hooks.
+
+| Route | `user` | `admin` | Purpose |
+|---|---|---|---|
+| `/dashboard` | ✓ | ✓ | Monthly spend, top categories, PENDING/FAILED counts, donut + sparkline |
+| `/transactions` | ✓ | ✓ | List + create + categorize/override the current user's transactions (admin can pass `?userId=`) |
+| `/accounts` | ✓ | ✓ | List + create bank/cash/card accounts (admin can pass `?userId=`) |
+| `/insights` | ✓ | ✓ | 12-month spending trend, per-category breakdown, top merchants, period selector |
+| `/categories` | — | ✓ | Admin-only CRUD on the category palette (hex colors drive chart slices) |
+| `/admin/users` | — | ✓ | Admin-only user list + create |
+
+Sign-out lives in the masthead (top-right), not in the sidebar — see `frontend/RUNBOOK.md` §15 for the full endpoint surface and known follow-ups.
 
 ---
 
