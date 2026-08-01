@@ -10,6 +10,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/services/apiClient';
 import type { Category } from '@/services/types';
+import { joinUrl } from '@/services/url';
 
 const KEY = ['categories'] as const;
 
@@ -25,7 +26,7 @@ export function useCategories({ apiBaseUrl }: UseCategoriesArgs) {
   return useQuery({
     queryKey: KEY,
     queryFn: async () => {
-      const res = await apiClient.get<Category[]>(`${apiBaseUrl}/categories`);
+      const res = await apiClient.get<Category[]>(joinUrl(apiBaseUrl, 'categories'));
       if (!res.ok) throw new Error(res.message);
       return res.data;
     },
@@ -36,7 +37,7 @@ export function useCreateCategory({ apiBaseUrl }: UseCategoriesArgs) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { slug: string; name: string; color: string }) => {
-      const res = await apiClient.post<Category>(`${apiBaseUrl}/categories`, input);
+      const res = await apiClient.post<Category>(joinUrl(apiBaseUrl, 'categories'), input);
       if (!res.ok) throw new Error(res.message);
       return res.data;
     },
@@ -48,7 +49,7 @@ export function useUpdateCategory({ apiBaseUrl }: UseCategoriesArgs) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: { name?: string; color?: string } }) => {
-      const res = await apiClient.patch<Category>(`${apiBaseUrl}/categories/${id}`, patch);
+      const res = await apiClient.patch<Category>(joinUrl(apiBaseUrl, `categories/${id}`), patch);
       if (!res.ok) throw new Error(res.message);
       return res.data;
     },
@@ -60,7 +61,7 @@ export function useDeleteCategory({ apiBaseUrl }: UseCategoriesArgs) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await apiClient.del<void>(`${apiBaseUrl}/categories/${id}`);
+      const res = await apiClient.del<void>(joinUrl(apiBaseUrl, `categories/${id}`));
       if (!res.ok) throw new Error(res.message);
       return res.data;
     },

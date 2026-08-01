@@ -8,8 +8,12 @@ export interface SidebarProps {
 }
 
 const links: readonly { label: string; path: string; roles: readonly ('admin' | 'user')[] }[] = [
-  { label: 'Dashboard', path: '/dashboard', roles: ['admin', 'user'] },
+  { label: 'Tablero', path: '/dashboard', roles: ['admin', 'user'] },
+  { label: 'Transacciones', path: '/transactions', roles: ['admin', 'user'] },
+  { label: 'Cuentas', path: '/accounts', roles: ['admin', 'user'] },
+  { label: 'Insights', path: '/insights', roles: ['admin', 'user'] },
   { label: 'Categorías', path: '/admin/categories', roles: ['admin'] },
+  { label: 'Usuarios', path: '/admin/users', roles: ['admin'] },
 ] as const;
 
 export function Sidebar({ currentRole, activePath, onNavigate }: SidebarProps) {

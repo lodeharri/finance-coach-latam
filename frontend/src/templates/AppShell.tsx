@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { HexStamp } from '@/atoms/HexStamp';
+import { LogoutButton } from '@/atoms/LogoutButton';
 import { RoleBadge } from '@/molecules/RoleBadge';
 import { Sidebar } from '@/organisms/Sidebar';
 import { ToastHost } from '@/organisms/ToastHost';
@@ -20,7 +21,11 @@ function formatToday(): string {
 
 function derivePageName(path: string): string {
   if (path === '/dashboard') return 'Tablero';
+  if (path === '/transactions') return 'Transacciones';
+  if (path === '/accounts') return 'Cuentas';
+  if (path === '/insights') return 'Insights';
   if (path === '/admin/categories') return 'Categorías';
+  if (path === '/admin/users') return 'Usuarios';
   return '';
 }
 
@@ -37,6 +42,7 @@ export function AppShell({ pageName, role, children }: AppShellProps) {
         <div className="flex items-center gap-3">
           {currentRole ? <RoleBadge role={currentRole} /> : null}
           <span data-testid="app-shell-date" className="font-mono text-xs uppercase tracking-[0.2em]" aria-label="Today's date">{formatToday()}</span>
+          <LogoutButton />
           <HexStamp />
         </div>
       </header>
