@@ -51,4 +51,51 @@ describe('AmountText', () => {
     const { container } = render(<AmountText amountCents={100} />);
     expect(container.querySelector('span')!.className).toMatch(/text-ink-tinta/);
   });
+
+  // Safety belt: a missing or non-numeric amountCents must not render "$NaN".
+  // Even though zod normalizes amount → amountCents, future partial-parse
+  // failures or raw 5xx payloads could leave amountCents undefined/null/NaN.
+  // Pinned so AmountText degrades to an em-dash with the mute ink color.
+  it('renders em-dash when amountCents is undefined', () => {
+    const { container } = render(
+      <AmountText amountCents={undefined as unknown as number} />,
+    );
+    const span = container.querySelector('span')!;
+    expect(span.textContent).toBe('—');
+    expect(span.className).toMatch(/text-ink-tinta-mute/);
+  });
+
+  it('renders em-dash when amountCents is null', () => {
+    const { container } = render(
+      <AmountText amountCents={null as unknown as number} />,
+    );
+    const span = container.querySelector('span')!;
+    expect(span.textContent).toBe('—');
+    expect(span.className).toMatch(/text-ink-tinta-mute/);
+  });
+
+  it('renders em-dash when amountCents is NaN', () => {
+    const { container } = render(<AmountText amountCents={NaN} />);
+    const span = container.querySelector('span')!;
+    expect(span.textContent).toBe('—');
+    expect(span.className).toMatch(/text-ink-tinta-mute/);
+  });
+
+  it('still renders formatted currency when amountCents is 0 (zero is valid)', () => {
+    const { container } = render(<AmountText amountCents={0} currency="ARS" />);
+    const span = container.querySelector('span')!;
+    expect(span.textContent).not.toBe('—');
+    // Currency-formatted zero is still "0,00" / "0.00" — but never the em-dash
+    // guard sentinel.
+    expect(span.textContent).toMatch(/0[.,]00/);
+    expect(span.className).not.toMatch(/text-ink-tinta-mute/);
+  });
+
+  it('still exposes data-amount-cents (empty string) when guarded, so test selectors stay stable', () => {
+    const { container } = render(
+      <AmountText amountCents={undefined as unknown as number} />,
+    );
+    const span = container.querySelector('span')!;
+    expect(span.getAttribute('data-amount-cents')).toBe('');
+  });
 });
