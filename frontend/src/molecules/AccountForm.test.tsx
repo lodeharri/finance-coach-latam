@@ -65,6 +65,17 @@ describe('AccountForm', () => {
     expect(nameInput.value).toBe('Checking');
   });
 
+  it('renders a visible label for each account type (BANK, CASH, CARD)', () => {
+    wrap(<AccountForm apiBaseUrl={BASE} userId="u1" />);
+
+    // Visible label — not the sr-only a11y duplicate. data-testid makes the
+    // assertion unambiguous so future refactors that keep the sr-only span
+    // don't break the test.
+    expect(screen.getByTestId('account-type-label-BANK')).toHaveTextContent('BANK');
+    expect(screen.getByTestId('account-type-label-CASH')).toHaveTextContent('CASH');
+    expect(screen.getByTestId('account-type-label-CARD')).toHaveTextContent('CARD');
+  });
+
   it('selecting CASH updates the active type glyph', async () => {
     const user = userEvent.setup();
     wrap(<AccountForm apiBaseUrl={BASE} userId="u1" />);
