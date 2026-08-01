@@ -53,20 +53,14 @@ export type Account = z.infer<typeof AccountSchema>;
 export const TransactionSchema = z.preprocess(
   (val) => {
     // Normalize the legacy backend `amount` field into `amountCents` BEFORE
-    // the strict integer check. Defense in depth: apiClient also parses with
-    // this schema, but the schema alone is enough to make every consumer of
-    // TransactionSchema safe regardless of the wire shape.
+    // the strict integer check. z.object strips unknown keys by default, so
+    // any surviving `amount` field is automatically dropped from the parsed
+    // output — no explicit strip needed.
     if (val && typeof val === 'object' && val !== null) {
       const obj = val as Record<string, unknown>;
       if (obj.amountCents === undefined && typeof obj.amount === 'number') {
         const { amount, ...rest } = obj;
         return { ...rest, amountCents: amount };
-      }
-      // Even when amountCents is already present, strip the legacy field so
-      // the SPA never accidentally reads `amount` instead of `amountCents`.
-      if ('amount' in obj) {
-        const { amount: _amount, ...rest } = obj;
-        return rest;
       }
     }
     return val;
