@@ -137,3 +137,25 @@ The system SHALL normalize `merchant` by trimming whitespace, collapsing interna
 - GIVEN `merchant === 'spotify'`
 - WHEN the normalization step runs
 - THEN the output equals `'spotify'` and no exception is raised
+
+### Requirement: Manual override path skips the categorization pipeline
+
+The system SHALL expose a `PATCH /transactions/{id}` path that resolves the actor's authority against the loaded row, validates the requested `categoryId`, writes the row, and returns the updated transaction. The override path SHALL NOT invoke the keyword, cache, embedding, or `generateText` layers — it is the explicit user decision and bypasses the entire categorization pipeline. The override MAY upsert `merchant_category_cache` as a learned merchant so future auto-categorization of the same merchant reflects the user's intent.
+
+#### Scenario: override skips the LLM
+
+- GIVEN any transaction state
+- WHEN `PATCH /transactions/{id}` is called with a valid `categoryId`
+- THEN the keyword, cache, embedding, and `generateText` layers are NOT invoked
+
+#### Scenario: explicit override updates the cache
+
+- GIVEN a transaction with `merchant="Shell"` and `categoryId=<transporte>`
+- WHEN the owner PATCHes `categoryId=<compras>`
+- THEN the transactions row is updated AND the cache row for normalized `"shell"` now points to `<compras>`
+
+#### Scenario: subsequent categorize call uses the new cache row
+
+- GIVEN the cache now maps `"shell"` → `<compras>`
+- WHEN `POST /transactions/{id}/categorize` runs for a fresh transaction with `merchant="Shell"`
+- THEN the cache layer short-circuits and assigns `<compras>` without invoking the LLM
