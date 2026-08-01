@@ -15,9 +15,9 @@ The full Spec-Driven Development artifacts live under [`openspec/changes/initial
 - [`design.md`](./openspec/changes/initial-poc/design.md) — Architecture diagram, components, ADRs (Hexagonal, Custom Resource, Drizzle, Gemini, RBAC)
 - [`tasks.md`](./openspec/changes/initial-poc/tasks.md) — Implementation tasks with `[x]` / `[ ]` checkboxes (62% complete)
 
-**Status:** Phases 1–4 complete (40/65 tasks). Phases 5–7 pending production validation, frontend, and CI/CD.
+**Status:** Phases 1–6 complete. Phase 6 (frontend foundation) closed via [`openspec/changes/archive/2026-07-31-frontend-foundation/`](./openspec/changes/archive/2026-07-31-frontend-foundation/) — backend 142/142 tests, frontend 157/157 tests, 8/8 ADRs honored, Litografía del Sur aesthetic applied, $0 cost confirmed. Phase 7 (CI/CD with OIDC) pending.
 
-The frontend SPA now ships under [`openspec/changes/frontend-foundation/`](./openspec/changes/frontend-foundation/) (PR1–PR5 merged). Live deployment is auto-published to Cloudflare Pages on every `main` push via the `deploy-frontend` job in `.github/workflows/deploy-staging.yml`.
+The frontend SPA shipped through [`openspec/changes/archive/2026-07-31-frontend-foundation/`](./openspec/changes/archive/2026-07-31-frontend-foundation/) (PR1–PR5 merged as #30–#34; SDD cycle closed with PASS WITH WARNINGS, 0 CRITICAL). The SPA is auto-deployed to Cloudflare Pages on every `main` push via the `deploy-frontend` job in `.github/workflows/deploy-staging.yml` (and mirrored in `deploy-production.yml`). See `frontend/RUNBOOK.md` for the deploy procedure, secrets table, 500-builds/mo ceiling, and CORS posture.
 
 ---
 
@@ -142,7 +142,7 @@ For current status see [tasks.md](./openspec/changes/initial-poc/tasks.md). Summ
 - ✅ **Phase 3 — GitHub repo** (6/6): public `lodeharri/finance-coach-latam`
 - ✅ **Phase 4 — Domain entities + auth** (14/14): User/Account/Category/Transaction + Cognito + Gemini
 - 🔜 **Phase 5 — Production validation** (0/9): deploy Phase 4, verify all spec scenarios end-to-end
-- ✅ **Phase 6 — Frontend + polish** (11/11): React SPA, Cloudflare Pages, RUNBOOK, design system
+- ✅ **Phase 6 — Frontend + polish (frontend foundation)** (11/11): React 18 + Vite + TS strict + Tailwind 3 SPA, Cloudflare Pages auto-deploy (`cloudflare/wrangler-action@v4`), `RUNBOOK.md`, "Litografía del Sur" design system. 5 chained PRs (#30–#34) merged stacked-to-main. Cycle closed — see [archive report](./openspec/changes/archive/2026-07-31-frontend-foundation/archive-report.md).
 - 🔜 **Phase 7 — CI/CD** (0/5): GitHub Actions with OIDC
 
 ### Frontend quickstart
