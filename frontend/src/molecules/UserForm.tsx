@@ -29,8 +29,8 @@ export function UserForm({ apiBaseUrl }: UserFormProps) {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const next: typeof errors = {};
-    if (!email.trim() || !email.includes('@')) next.email = 'Email is required.';
-    if (!name.trim()) next.name = 'Name is required.';
+    if (!email.trim() || !email.includes('@')) next.email = 'El correo es obligatorio.';
+    if (!name.trim()) next.name = 'El nombre es obligatorio.';
     if (Object.keys(next).length > 0) {
       setErrors(next);
       return;
@@ -40,7 +40,7 @@ export function UserForm({ apiBaseUrl }: UserFormProps) {
       { email: email.trim(), name: name.trim(), tier },
       {
         onError: (err) => {
-          setErrors({ form: err instanceof Error ? err.message : 'Could not create user.' });
+          setErrors({ form: err instanceof Error ? err.message : 'No se pudo crear el usuario.' });
         },
       },
     );
@@ -50,22 +50,22 @@ export function UserForm({ apiBaseUrl }: UserFormProps) {
     <form onSubmit={submit} noValidate className="flex flex-col gap-5" data-testid="user-form">
       <FormField
         id="usr-email"
-        label="Email"
+        label="Correo"
         type="email"
         variant="editorial"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        placeholder="user@example.com"
+        placeholder="usuario@ejemplo.com"
         required
         error={errors.email}
       />
       <FormField
         id="usr-name"
-        label="Name"
+        label="Nombre"
         variant="editorial"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        placeholder="Jane Doe"
+        placeholder="Juan Pérez"
         required
         error={errors.name}
       />
@@ -74,9 +74,9 @@ export function UserForm({ apiBaseUrl }: UserFormProps) {
           htmlFor="usr-tier"
           className="block font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta-soft"
         >
-          Tier
+          Nivel
         </label>
-        <div className="flex gap-2" role="radiogroup" aria-label="User tier">
+        <div className="flex gap-2" role="radiogroup" aria-label="Nivel de usuario">
           {TIERS.map((t) => {
             const active = tier === t;
             return (
@@ -107,7 +107,7 @@ export function UserForm({ apiBaseUrl }: UserFormProps) {
       ) : null}
       <div>
         <Button type="submit" disabled={create.isPending}>
-          {create.isPending ? 'Saving…' : 'Add user'}
+          {create.isPending ? 'Guardando…' : 'Agregar usuario'}
         </Button>
       </div>
     </form>

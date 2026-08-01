@@ -68,6 +68,12 @@ describe('Editorial page headers', () => {
     expect(count.textContent).toMatch(/MOVIMIENTOS/);
   });
 
+  it('TransactionsPage renders the Spanish "Mis transacciones" heading', async () => {
+    wrap(<TransactionsPage apiBaseUrl={BASE} />, '/transactions');
+    const header = await screen.findByTestId('transactions-page-header');
+    expect(header.textContent).toMatch(/Mis transacciones/);
+  });
+
   it('TransactionsPage renders a pagination control below the table', async () => {
     wrap(<TransactionsPage apiBaseUrl={BASE} />, '/transactions');
     const pagination = await screen.findByTestId('pagination');
@@ -124,7 +130,6 @@ describe('Editorial page headers', () => {
       }),
     );
     wrap(<TransactionsPage apiBaseUrl={BASE} />, '/transactions');
-    // Wait for the first page to load so the Next button is enabled.
     await waitFor(() => {
       const range = screen.getByTestId('transactions-range');
       expect(range.textContent).toMatch(/1–25/);
@@ -151,6 +156,12 @@ describe('Editorial page headers', () => {
     wrap(<AccountsPage apiBaseUrl={BASE} />, '/accounts');
     const count = await screen.findByTestId('row-count');
     expect(count.textContent).toMatch(/N.º \d+ · CUENTAS/);
+  });
+
+  it('AccountsPage renders the Spanish "Mis cuentas" heading', async () => {
+    wrap(<AccountsPage apiBaseUrl={BASE} />, '/accounts');
+    const header = await screen.findByTestId('accounts-page-header');
+    expect(header.textContent).toMatch(/Mis cuentas/);
   });
 
   it('UsersAdminPage renders the DIRECTORIO kicker', async () => {

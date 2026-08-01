@@ -77,7 +77,7 @@ export function TransactionsPage({ apiBaseUrl }: TransactionsPageProps) {
         </span>
         <div className="flex items-baseline justify-between gap-4">
           <h1 className="font-display text-2xl font-bold text-ink-tinta">
-            {isAdminTarget ? `Transactions for ${userId}` : 'My transactions'}
+            {isAdminTarget ? `Transacciones de ${userId}` : 'Mis transacciones'}
           </h1>
           <span
             className="font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta-mute"
@@ -111,7 +111,7 @@ export function TransactionsPage({ apiBaseUrl }: TransactionsPageProps) {
           <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-tinta-mute">
             * * *&nbsp;&nbsp;NUEVO MOVIMIENTO
           </span>
-          <h2 className="font-display text-lg font-bold text-ink-tinta">Log a new transaction</h2>
+          <h2 className="font-display text-lg font-bold text-ink-tinta">Registrar transacción</h2>
         </header>
         <TransactionForm apiBaseUrl={apiBaseUrl} userId={userId} />
       </section>

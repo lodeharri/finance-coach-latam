@@ -25,9 +25,9 @@ export function CategoryTable({ apiBaseUrl }: CategoryTableProps) {
   if (categories.isPending) {
     return (
       <div className="flex items-center gap-3" data-testid="category-table-loading">
-        <Spinner aria-label="Loading categories" />
+        <Spinner aria-label="Cargando categorías" />
         <span className="font-mono text-xs uppercase tracking-wide text-ink-tinta-soft">
-          N.º loading
+          N.º cargando
         </span>
       </div>
     );
@@ -36,7 +36,7 @@ export function CategoryTable({ apiBaseUrl }: CategoryTableProps) {
   if (categories.isError) {
     return (
       <p className="font-body text-sm text-ink-negativo" role="alert">
-        Failed to load categories: {categories.error?.message ?? 'unknown error'}
+        Error al cargar categorías: {categories.error?.message ?? 'error desconocido'}
       </p>
     );
   }
@@ -45,7 +45,7 @@ export function CategoryTable({ apiBaseUrl }: CategoryTableProps) {
   if (list.length === 0) {
     return (
       <p className="font-body text-sm text-ink-tinta-soft" data-testid="empty-state">
-        No categories yet. Create one to get started.
+        Aún no hay categorías. Crea una para empezar.
       </p>
     );
   }
@@ -58,13 +58,13 @@ export function CategoryTable({ apiBaseUrl }: CategoryTableProps) {
             Slug
           </th>
           <th className="border-b border-ink-paper-press py-2 text-left font-mono text-xs uppercase tracking-wide text-ink-tinta-soft">
-            Name
+            Nombre
           </th>
           <th className="border-b border-ink-paper-press py-2 text-left font-mono text-xs uppercase tracking-wide text-ink-tinta-soft">
             Color
           </th>
           <th className="border-b border-ink-paper-press py-2 text-right font-mono text-xs uppercase tracking-wide text-ink-tinta-soft">
-            Actions
+            Acciones
           </th>
         </tr>
       </thead>
@@ -95,7 +95,7 @@ export function CategoryTable({ apiBaseUrl }: CategoryTableProps) {
                   }}
                   disabled={remove.isPending}
                 >
-                  Delete
+                  Eliminar
                 </Button>
                 {conflict ? (
                   <p

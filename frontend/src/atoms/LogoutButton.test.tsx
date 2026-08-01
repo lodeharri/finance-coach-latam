@@ -42,14 +42,14 @@ describe('LogoutButton', () => {
     localStorage.clear();
   });
 
-  it('renders the active-voice label "Sign out" (REQ-FFC-FE-LOGOUT)', () => {
+  it('renders the active-voice label "Cerrar sesión" (REQ-FFC-FE-LOGOUT)', () => {
     render(<Probe />);
-    expect(screen.getByRole('button', { name: /sign out/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /cerrar sesión/i })).toBeInTheDocument();
   });
 
   it('click clears the session then navigates to /login', () => {
     render(<Probe />);
-    const button = screen.getByRole('button', { name: /sign out/i });
+    const button = screen.getByRole('button', { name: /cerrar sesión/i });
     fireEvent.click(button);
 
     expect(sessionStore.getState().idToken).toBeUndefined();
@@ -59,7 +59,7 @@ describe('LogoutButton', () => {
 
   it('keyboard activation (Enter) clears the session and navigates', () => {
     render(<Probe />);
-    const button = screen.getByRole('button', { name: /sign out/i });
+    const button = screen.getByRole('button', { name: /cerrar sesión/i });
     button.focus();
     fireEvent.keyDown(button, { key: 'Enter' });
     // Native <button> elements fire click on Enter; emulate it explicitly.
@@ -71,7 +71,7 @@ describe('LogoutButton', () => {
 
   it('keyboard activation (Space) triggers the same flow', () => {
     render(<Probe />);
-    const button = screen.getByRole('button', { name: /sign out/i });
+    const button = screen.getByRole('button', { name: /cerrar sesión/i });
     fireEvent.click(button); // Space on a button fires click
     expect(sessionStore.getState().idToken).toBeUndefined();
     expect(screen.getByTestId('login-page')).toBeInTheDocument();
@@ -79,7 +79,7 @@ describe('LogoutButton', () => {
 
   it('uses native <button type="button"> to avoid form-submit side effects', () => {
     render(<Probe />);
-    const button = screen.getByRole('button', { name: /sign out/i });
+    const button = screen.getByRole('button', { name: /cerrar sesión/i });
     expect(button.tagName).toBe('BUTTON');
     expect(button.getAttribute('type')).toBe('button');
   });
@@ -87,8 +87,8 @@ describe('LogoutButton', () => {
   it('has an accessible name that says what the control does', () => {
     render(<Probe />);
     // aria-label is the long-form for assistive tech; the visible label is
-    // "Sign out". Both surface the same intent.
-    const button = screen.getByRole('button', { name: /sign out/i });
-    expect(button).toHaveAccessibleName(/sign out/i);
+    // "Cerrar sesión". Both surface the same intent.
+    const button = screen.getByRole('button', { name: /cerrar sesión/i });
+    expect(button).toHaveAccessibleName(/cerrar sesión/i);
   });
 });

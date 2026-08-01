@@ -16,17 +16,17 @@ export function NotFoundPage() {
         className="font-mono text-xs uppercase tracking-[0.2em]"
         style={{ color: 'var(--ink-tinta-mute)' }}
       >
-        N.º 0404 — Not found
+        N.º 0404 — No encontrado
       </p>
-      <h1 className="mt-3 font-display text-2xl sm:text-3xl">404 — Page not found</h1>
+      <h1 className="mt-3 font-display text-2xl sm:text-3xl">404 — Página no encontrada</h1>
       <p className="mt-4 max-w-prose text-base sm:text-lg text-ink-tinta-soft">
-        The page you&apos;re looking for doesn&apos;t exist. Use the link below to go back.
+        La página que buscas no existe. Usa el enlace de abajo para volver.
       </p>
       <Link
         to="/dashboard"
         className="mt-8 inline-flex w-fit font-body text-sm text-ink-cobalto underline-offset-2 hover:underline"
       >
-        ← Back to dashboard
+        ← Volver al tablero
       </Link>
     </main>
   );

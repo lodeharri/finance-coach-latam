@@ -192,7 +192,7 @@ export function InsightsPage({ apiBaseUrl }: InsightsPageProps) {
           TENDENCIAS · 12 MESES
         </span>
         <div className="flex items-baseline justify-between gap-4">
-          <h1 className="font-display text-2xl font-bold text-ink-tinta">Insights</h1>
+          <h1 className="font-display text-2xl font-bold text-ink-tinta">Análisis</h1>
         </div>
         <div
           className="flex flex-wrap items-stretch gap-px overflow-hidden rounded-sm border border-ink-paper-press bg-ink-paper-press"
@@ -236,13 +236,13 @@ export function InsightsPage({ apiBaseUrl }: InsightsPageProps) {
             Aún no hay suficiente historia.
           </p>
           <p className="mt-2 font-body text-md text-ink-tinta-soft">
-            Log a transaction to see your monthly trend and category breakdown here.
+            Registra una transacción para ver aquí la tendencia mensual y el desglose por categoría.
           </p>
           <Link
             to="/transactions"
             className="mt-4 inline-block font-display text-md text-ink-cobalto underline-offset-4 hover:underline"
           >
-            Log a transaction →
+            Registrar transacción →
           </Link>
         </section>
       ) : (
@@ -252,7 +252,7 @@ export function InsightsPage({ apiBaseUrl }: InsightsPageProps) {
               <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-tinta-mute">
                 * * *&nbsp;&nbsp;EJE TEMPORAL · 12 MESES
               </span>
-              <h2 className="font-display text-lg font-bold text-ink-tinta">12-month trend</h2>
+              <h2 className="font-display text-lg font-bold text-ink-tinta">Tendencia de 12 meses</h2>
             </header>
             <Suspense fallback={<ChartSkeleton />}>
               <MonthlySparkline data={trend} width={640} height={280} />
@@ -264,7 +264,7 @@ export function InsightsPage({ apiBaseUrl }: InsightsPageProps) {
               <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-tinta-mute">
                 * * *&nbsp;&nbsp;DESGLOSE
               </span>
-              <h2 className="font-display text-lg font-bold text-ink-tinta">Breakdown by category</h2>
+              <h2 className="font-display text-lg font-bold text-ink-tinta">Desglose por categoría</h2>
             </header>
             <table className="w-full border-collapse font-body text-md" data-testid="breakdown-table">
               <thead>
@@ -273,13 +273,13 @@ export function InsightsPage({ apiBaseUrl }: InsightsPageProps) {
                     scope="col"
                     className="py-2 pr-4 font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta"
                   >
-                    Category
+                    Categoría
                   </th>
                   <th
                     scope="col"
                     className="py-2 pr-4 text-right font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta"
                   >
-                    <button
+                      <button
                       type="button"
                       onClick={() => {
                         setSortKey('total');
@@ -332,7 +332,7 @@ export function InsightsPage({ apiBaseUrl }: InsightsPageProps) {
                       }}
                       className="font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta hover:text-ink-cobalto"
                     >
-                      Count {sortKey === 'count' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+                      Cantidad {sortKey === 'count' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
                     </button>
                   </th>
                 </tr>
@@ -375,7 +375,7 @@ export function InsightsPage({ apiBaseUrl }: InsightsPageProps) {
               <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-tinta-mute">
                 * * *&nbsp;&nbsp;COMERCIOS TOP
               </span>
-              <h2 className="font-display text-lg font-bold text-ink-tinta">Top merchants</h2>
+              <h2 className="font-display text-lg font-bold text-ink-tinta">Comercios principales</h2>
             </header>
             <ul className="flex flex-col" data-testid="top-merchants">
               {topMerchants.map((m, idx) => (

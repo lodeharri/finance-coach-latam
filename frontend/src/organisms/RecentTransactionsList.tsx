@@ -29,7 +29,7 @@ export function RecentTransactionsList({ apiBaseUrl, userId }: RecentTransaction
   if (rows.length === 0) {
     return (
       <div data-testid="recent-empty" className="font-body text-sm text-ink-tinta-soft">
-        Sin movimientos aún. Log your first transaction to see it here.
+        Sin movimientos aún. Registra tu primera transacción para verla aquí.
       </div>
     );
   }

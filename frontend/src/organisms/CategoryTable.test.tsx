@@ -58,7 +58,7 @@ describe('CategoryTable', () => {
   it('renders an empty-state when the list is empty', async () => {
     server.use(http.get(`${BASE}/categories`, () => HttpResponse.json([])));
     wrap(<CategoryTable apiBaseUrl={BASE} />);
-    expect(await screen.findByText(/no categories yet/i)).toBeInTheDocument();
+    expect(await screen.findByText(/aún no hay categorías/i)).toBeInTheDocument();
   });
 
   it('renders a loading state while fetching', () => {
@@ -73,7 +73,7 @@ describe('CategoryTable', () => {
     expect(screen.getAllByRole('status')[0]).toBeInTheDocument();
   });
 
-  it('clicking Delete removes the row (optimistic) and confirms 204 success', async () => {
+  it('clicking Eliminar removes the row (optimistic) and confirms 204 success', async () => {
     let deleted = false;
     server.use(
       http.get(`${BASE}/categories`, () =>
@@ -94,7 +94,7 @@ describe('CategoryTable', () => {
 
     wrap(<CategoryTable apiBaseUrl={BASE} />);
     await screen.findByText('Groceries');
-    const diningDelete = screen.getAllByRole('button', { name: /delete/i })[1]!;
+    const diningDelete = screen.getAllByRole('button', { name: /eliminar/i })[1]!;
     await act(async () => {
       diningDelete.click();
     });
@@ -116,7 +116,7 @@ describe('CategoryTable', () => {
 
     wrap(<CategoryTable apiBaseUrl={BASE} />);
     await screen.findByText('Dining');
-    const diningDelete = screen.getAllByRole('button', { name: /delete/i })[1]!;
+    const diningDelete = screen.getAllByRole('button', { name: /eliminar/i })[1]!;
     await act(async () => {
       diningDelete.click();
     });

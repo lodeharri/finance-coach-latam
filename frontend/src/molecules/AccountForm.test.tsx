@@ -44,7 +44,7 @@ describe('AccountForm', () => {
   it('renders the form with default props (empty name, BANK type selected)', () => {
     wrap(<AccountForm apiBaseUrl={BASE} userId="u1" />);
 
-    const nameInput = screen.getByLabelText(/account name/i) as HTMLInputElement;
+    const nameInput = screen.getByLabelText(/nombre de la cuenta/i) as HTMLInputElement;
     expect(nameInput).toBeInTheDocument();
     expect(nameInput.value).toBe('');
 
@@ -60,9 +60,9 @@ describe('AccountForm', () => {
     const user = userEvent.setup();
     wrap(<AccountForm apiBaseUrl={BASE} userId="u1" />);
 
-    const nameInput = screen.getByLabelText(/account name/i) as HTMLInputElement;
-    await user.type(nameInput, 'Checking');
-    expect(nameInput.value).toBe('Checking');
+    const nameInput = screen.getByLabelText(/nombre de la cuenta/i) as HTMLInputElement;
+    await user.type(nameInput, 'Cuenta corriente');
+    expect(nameInput.value).toBe('Cuenta corriente');
   });
 
   it('renders a visible label for each account type (BANK, CASH, CARD)', () => {
@@ -98,23 +98,23 @@ describe('AccountForm', () => {
     const user = userEvent.setup();
     wrap(<AccountForm apiBaseUrl={BASE} userId="u1" />);
 
-    await user.click(screen.getByRole('button', { name: /add account/i }));
+    await user.click(screen.getByRole('button', { name: /agregar cuenta/i }));
 
-    expect(await screen.findByText(/account name is required/i)).toBeInTheDocument();
+    expect(await screen.findByText(/nombre de la cuenta es obligatorio/i)).toBeInTheDocument();
     // The error is rendered as a role=alert via FormField so it is announced
     // to assistive tech. The name input itself receives the error styling.
-    expect(screen.getByRole('alert')).toHaveTextContent(/account name is required/i);
+    expect(screen.getByRole('alert')).toHaveTextContent(/nombre de la cuenta es obligatorio/i);
   });
 
   it('submitting with whitespace-only name also triggers the required error', async () => {
     const user = userEvent.setup();
     wrap(<AccountForm apiBaseUrl={BASE} userId="u1" />);
 
-    const nameInput = screen.getByLabelText(/account name/i);
+    const nameInput = screen.getByLabelText(/nombre de la cuenta/i);
     await user.type(nameInput, '   ');
-    await user.click(screen.getByRole('button', { name: /add account/i }));
+    await user.click(screen.getByRole('button', { name: /agregar cuenta/i }));
 
-    expect(await screen.findByText(/account name is required/i)).toBeInTheDocument();
+    expect(await screen.findByText(/nombre de la cuenta es obligatorio/i)).toBeInTheDocument();
   });
 
   it('submitting with a name POSTs { userId, name, type } to /accounts', async () => {
@@ -129,10 +129,10 @@ describe('AccountForm', () => {
     const user = userEvent.setup();
     wrap(<AccountForm apiBaseUrl={BASE} userId="u1" />);
 
-    const nameInput = screen.getByLabelText(/account name/i);
+    const nameInput = screen.getByLabelText(/nombre de la cuenta/i);
     await user.type(nameInput, 'Savings');
     await user.click(screen.getByRole('radio', { name: 'CASH' }));
-    await user.click(screen.getByRole('button', { name: /add account/i }));
+    await user.click(screen.getByRole('button', { name: /agregar cuenta/i }));
 
     await waitFor(() => expect(captured).not.toBeNull());
     expect(captured).toEqual({ userId: 'u1', name: 'Savings', type: 'CASH' });
@@ -161,9 +161,9 @@ describe('AccountForm', () => {
     const user = userEvent.setup();
     wrap(<AccountForm apiBaseUrl={BASE} userId="u1" />);
 
-    const nameInput = screen.getByLabelText(/account name/i);
+    const nameInput = screen.getByLabelText(/nombre de la cuenta/i);
     await user.type(nameInput, '   Checking   ');
-    await user.click(screen.getByRole('button', { name: /add account/i }));
+    await user.click(screen.getByRole('button', { name: /agregar cuenta/i }));
 
     await waitFor(() => expect(captured).not.toBeNull());
     expect((captured as { name: string }).name).toBe('Checking');
@@ -174,7 +174,7 @@ describe('AccountForm', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
-  it('disables submit and shows "Saving…" while the mutation is in-flight', async () => {
+  it('disables submit and shows "Guardando…" while the mutation is in-flight', async () => {
     let resolvePost!: () => void;
     server.use(
       http.post(`${BASE}/accounts`, () =>
@@ -201,18 +201,18 @@ describe('AccountForm', () => {
     const user = userEvent.setup();
     wrap(<AccountForm apiBaseUrl={BASE} userId="u1" />);
 
-    await user.type(screen.getByLabelText(/account name/i), 'Checking');
-    await user.click(screen.getByRole('button', { name: /add account/i }));
+    await user.type(screen.getByLabelText(/nombre de la cuenta/i), 'Checking');
+    await user.click(screen.getByRole('button', { name: /agregar cuenta/i }));
 
-    // While pending: button text flips to "Saving…" and is disabled.
-    const saving = await screen.findByRole('button', { name: /saving…/i });
+    // While pending: button text flips to "Guardando…" and is disabled.
+    const saving = await screen.findByRole('button', { name: /guardando…/i });
     expect(saving).toBeDisabled();
 
     resolvePost();
 
-    // After resolve: button returns to "Add account" and is enabled again.
+    // After resolve: button returns to "Agregar cuenta" and is enabled again.
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /add account/i })).toBeEnabled(),
+      expect(screen.getByRole('button', { name: /agregar cuenta/i })).toBeEnabled(),
     );
     // No inline error surfaced (REL-003 — partial Account response would
     // make apiClient throw validation_error through AccountSchema).
@@ -240,13 +240,13 @@ describe('AccountForm', () => {
     const user = userEvent.setup();
     wrap(<AccountForm apiBaseUrl={BASE} userId="u1" />);
 
-    const nameInput = screen.getByLabelText(/account name/i) as HTMLInputElement;
+    const nameInput = screen.getByLabelText(/nombre de la cuenta/i) as HTMLInputElement;
     await user.type(nameInput, 'Checking');
     await user.click(screen.getByRole('radio', { name: 'CARD' }));
-    await user.click(screen.getByRole('button', { name: /add account/i }));
+    await user.click(screen.getByRole('button', { name: /agregar cuenta/i }));
 
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /add account/i })).toBeEnabled(),
+      expect(screen.getByRole('button', { name: /agregar cuenta/i })).toBeEnabled(),
     );
     // The form does not auto-reset. The current behavior is to leave the
     // values in place; this test pins that contract.
@@ -266,8 +266,8 @@ describe('AccountForm', () => {
     const user = userEvent.setup();
     wrap(<AccountForm apiBaseUrl={BASE} userId="u1" />);
 
-    await user.type(screen.getByLabelText(/account name/i), 'Checking');
-    await user.click(screen.getByRole('button', { name: /add account/i }));
+    await user.type(screen.getByLabelText(/nombre de la cuenta/i), 'Checking');
+    await user.click(screen.getByRole('button', { name: /agregar cuenta/i }));
 
     expect(await screen.findByText(/account name already exists/i)).toBeInTheDocument();
   });

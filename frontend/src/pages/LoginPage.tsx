@@ -48,11 +48,11 @@ export function LoginPage({ env }: LoginPageProps) {
   };
 
   return (
-    <AuthShell title="Sign in">
+    <AuthShell title="Iniciar sesión">
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5" data-testid="login-form">
         <FormField
           id="email"
-          label="Email"
+          label="Correo"
           type="email"
           variant="editorial"
           value={email}
@@ -62,7 +62,7 @@ export function LoginPage({ env }: LoginPageProps) {
         />
         <FormField
           id="password"
-          label="Password"
+          label="Contraseña"
           type="password"
           variant="editorial"
           value={password}
@@ -80,7 +80,7 @@ export function LoginPage({ env }: LoginPageProps) {
           </p>
         ) : null}
         <Button type="submit" disabled={auth.status === 'authenticating'} data-testid="login-submit">
-          {auth.status === 'authenticating' ? 'Signing in…' : 'Sign in'}
+          {auth.status === 'authenticating' ? 'Ingresando…' : 'Iniciar sesión'}
         </Button>
       </form>
     </AuthShell>

@@ -44,7 +44,7 @@ export function TransactionTable({
   if (isLoading) {
     return (
       <div role="status" aria-busy="true" className="font-body text-sm text-ink-tinta-soft">
-        Loading transactions…
+        Cargando transacciones…
       </div>
     );
   }
@@ -57,7 +57,7 @@ export function TransactionTable({
       >
         <p className="font-display text-lg italic text-ink-tinta">Ningún movimiento aún.</p>
         <p className="mt-1 font-body text-sm text-ink-tinta-soft">
-          Log your first transaction to see it here.
+          Registra tu primera transacción para verla aquí.
         </p>
       </div>
     );
@@ -71,22 +71,22 @@ export function TransactionTable({
             N.º
           </th>
           <th scope="col" className="py-2 pr-4 font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta">
-            Date
+            Fecha
           </th>
           <th scope="col" className="py-2 pr-4 font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta">
-            Merchant
+            Comercio
           </th>
           <th scope="col" className="py-2 pr-4 font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta">
-            Category
+            Categoría
           </th>
           <th scope="col" className="py-2 pr-4 text-right font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta">
-            Amount
+            Monto
           </th>
           <th scope="col" className="py-2 pr-4 font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta">
-            Status
+            Estado
           </th>
           <th scope="col" className="py-2 pr-4 font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta">
-            Actions
+            Acciones
           </th>
         </tr>
       </thead>
@@ -99,6 +99,12 @@ export function TransactionTable({
               : row.status === 'PENDING'
                 ? 'alerta'
                 : 'fallo';
+          const statusLabel =
+            row.status === 'CATEGORIZED'
+              ? 'CATEGORIZADO'
+              : row.status === 'PENDING'
+                ? 'PENDIENTE'
+                : 'FALLIDO';
           return (
             <tr
               key={row.id}
@@ -128,7 +134,7 @@ export function TransactionTable({
                     type="button"
                     onClick={() => setOverrideFor(row.id)}
                     className="focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-cobalto"
-                    aria-label={`Change category for ${row.merchant}`}
+                    aria-label={`Cambiar categoría de ${row.merchant}`}
                   >
                     <CategoryPill slug={cat.slug} name={cat.name} color={cat.color} />
                   </button>
@@ -138,7 +144,7 @@ export function TransactionTable({
                     onClick={() => setOverrideFor(row.id)}
                     className="font-body text-sm text-ink-tinta-mute underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-cobalto"
                   >
-                    Assign…
+                    Asignar…
                   </button>
                 )}
               </td>
@@ -150,7 +156,7 @@ export function TransactionTable({
                 />
               </td>
               <td className="py-2 pr-4">
-                <Badge variant={statusVariant}>{row.status}</Badge>
+                <Badge variant={statusVariant}>{statusLabel}</Badge>
               </td>
               <td className="py-2 pr-4">
                 {row.status !== 'CATEGORIZED' ? (
@@ -159,7 +165,7 @@ export function TransactionTable({
                     onClick={() => onRecategorize(row.id)}
                     className="font-body text-sm text-ink-cobalto hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-cobalto"
                   >
-                    Recategorize
+                    Recategorizar
                   </button>
                 ) : null}
               </td>

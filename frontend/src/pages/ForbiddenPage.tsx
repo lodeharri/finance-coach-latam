@@ -16,18 +16,18 @@ export function ForbiddenPage() {
         className="font-mono text-xs uppercase tracking-[0.2em]"
         style={{ color: 'var(--ink-tinta-mute)' }}
       >
-        N.º 0403 — Forbidden
+        N.º 0403 — Acceso denegado
       </p>
-      <h1 className="mt-3 font-display text-2xl sm:text-3xl">403 — Forbidden</h1>
+      <h1 className="mt-3 font-display text-2xl sm:text-3xl">403 — Acceso denegado</h1>
       <p className="mt-4 max-w-prose text-base sm:text-lg text-ink-tinta-soft">
-        Your account doesn&apos;t have permission to view this page. If you believe this is a
-        mistake, contact an administrator.
+        Tu cuenta no tiene permiso para ver esta página. Si crees que es un error,
+        contacta a un administrador.
       </p>
       <Link
         to="/dashboard"
         className="mt-8 inline-flex w-fit font-body text-sm text-ink-cobalto underline-offset-2 hover:underline"
       >
-        ← Back to dashboard
+        ← Volver al tablero
       </Link>
     </main>
   );

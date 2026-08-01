@@ -34,7 +34,7 @@ export function MonthlySparkline({ data, width = 320, height = 200 }: MonthlySpa
         className="font-body text-sm text-ink-tinta-soft"
         style={{ width, height }}
       >
-        Not enough history yet.
+        Aún no hay suficiente historia.
       </div>
     );
   }

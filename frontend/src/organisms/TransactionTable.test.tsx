@@ -106,12 +106,12 @@ describe('TransactionTable', () => {
       />,
     );
     await waitFor(() => expect(screen.getByTestId('transaction-table')).toBeInTheDocument());
-    expect(screen.getByText('CATEGORIZED')).toBeInTheDocument();
-    expect(screen.getByText('PENDING')).toBeInTheDocument();
-    expect(screen.getByText('FAILED')).toBeInTheDocument();
+    expect(screen.getByText('CATEGORIZADO')).toBeInTheDocument();
+    expect(screen.getByText('PENDIENTE')).toBeInTheDocument();
+    expect(screen.getByText('FALLIDO')).toBeInTheDocument();
   });
 
-  it('renders the Recategorize button only for PENDING|FAILED rows', async () => {
+  it('renders the Recategorizar button only for PENDING|FAILED rows', async () => {
     wrap(
       <TransactionTable
         apiBaseUrl={BASE}
@@ -122,7 +122,7 @@ describe('TransactionTable', () => {
       />,
     );
     await waitFor(() => expect(screen.getByTestId('transaction-table')).toBeInTheDocument());
-    const buttons = screen.getAllByRole('button', { name: /recategorize/i });
+    const buttons = screen.getAllByRole('button', { name: /recategorizar/i });
     expect(buttons).toHaveLength(1);
   });
 
@@ -152,11 +152,11 @@ describe('TransactionTable', () => {
       />,
     );
     await waitFor(() => expect(screen.getByText('Transporte')).toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: /change category for pedidosya/i }));
+    fireEvent.click(screen.getByRole('button', { name: /cambiar categoría de pedidosya/i }));
     await waitFor(() => expect(screen.getByRole('listbox')).toBeInTheDocument());
   });
 
-  it('clicking Recategorize invokes onRecategorize with the row id', async () => {
+  it('clicking Recategorizar invokes onRecategorize with the row id', async () => {
     let captured: string | undefined;
     wrap(
       <TransactionTable
@@ -168,7 +168,7 @@ describe('TransactionTable', () => {
       />,
     );
     await waitFor(() => expect(screen.getByTestId('transaction-table')).toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: /recategorize/i }));
+    fireEvent.click(screen.getByRole('button', { name: /recategorizar/i }));
     expect(captured).toBe('t1');
   });
 
