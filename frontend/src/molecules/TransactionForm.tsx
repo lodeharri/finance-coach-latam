@@ -70,7 +70,7 @@ export function TransactionForm({ apiBaseUrl, userId }: TransactionFormProps) {
   };
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-3" data-testid="transaction-form">
+    <form onSubmit={submit} noValidate className="flex flex-col gap-3" data-testid="transaction-form">
       <FormField
         id="tx-amount"
         label="Amount (cents)"

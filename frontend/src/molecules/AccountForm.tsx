@@ -42,7 +42,7 @@ export function AccountForm({ apiBaseUrl, userId }: AccountFormProps) {
   };
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-3" data-testid="account-form">
+    <form onSubmit={submit} noValidate className="flex flex-col gap-3" data-testid="account-form">
       <FormField
         id="acc-name"
         label="Account name"

@@ -49,7 +49,7 @@ export function LoginPage({ env }: LoginPageProps) {
 
   return (
     <AuthShell title="Sign in">
-      <form onSubmit={onSubmit} className="flex flex-col gap-4" data-testid="login-form">
+      <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4" data-testid="login-form">
         <FormField
           id="email"
           label="Email"

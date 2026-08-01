@@ -44,7 +44,7 @@ export function UserForm({ apiBaseUrl }: UserFormProps) {
   };
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-3" data-testid="user-form">
+    <form onSubmit={submit} noValidate className="flex flex-col gap-3" data-testid="user-form">
       <FormField
         id="usr-email"
         label="Email"
