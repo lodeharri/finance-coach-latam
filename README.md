@@ -17,6 +17,8 @@ The full Spec-Driven Development artifacts live under [`openspec/changes/initial
 
 **Status:** Phases 1–4 complete (40/65 tasks). Phases 5–7 pending production validation, frontend, and CI/CD.
 
+The frontend SPA now ships under [`openspec/changes/frontend-foundation/`](./openspec/changes/frontend-foundation/) (PR1–PR5 merged). Live deployment is auto-published to Cloudflare Pages on every `main` push via the `deploy-frontend` job in `.github/workflows/deploy-staging.yml`.
+
 ---
 
 ## Folder Structure
@@ -24,7 +26,7 @@ The full Spec-Driven Development artifacts live under [`openspec/changes/initial
 ```
 finance-coach-latam/
 ├── backend/          # Node 24 + TypeScript + esbuild. Hexagonal (domain/application/infrastructure/interfaces).
-├── frontend/         # React 18 + Vite + TS + Tailwind + Recharts. Atomic Design (placeholder for Phase 2).
+├── frontend/         # React 18 + Vite + TS + Tailwind + Atomic Design. Live at https://finance-coach-latam.pages.dev (after deploy).
 ├── infra/            # AWS CDK v2 (TypeScript), single stack, region us-east-1.
 ├── .atl/             # Skill registry cache (internal tooling).
 └── README.md
@@ -64,7 +66,7 @@ backend/src/
 | Lambda | 512 MB / 10 s |
 | LLM | Gemini 2.0 Flash + text-embedding-004 (free tier) |
 | Auth | Amazon Cognito User Pool (2 roles: admin + user, JWT authorizer) |
-| Frontend hosting | Cloudflare Pages (Phase 6) |
+| Frontend hosting | Cloudflare Pages (free tier, `$wrangler-action@v4`) |
 
 **Free tier only.** Zero ongoing cost in normal demo usage.
 
@@ -140,8 +142,22 @@ For current status see [tasks.md](./openspec/changes/initial-poc/tasks.md). Summ
 - ✅ **Phase 3 — GitHub repo** (6/6): public `lodeharri/finance-coach-latam`
 - ✅ **Phase 4 — Domain entities + auth** (14/14): User/Account/Category/Transaction + Cognito + Gemini
 - 🔜 **Phase 5 — Production validation** (0/9): deploy Phase 4, verify all spec scenarios end-to-end
-- 🔜 **Phase 6 — Frontend + polish** (0/11): React SPA, Cloudflare Pages, case-study.md, runbook.md
+- ✅ **Phase 6 — Frontend + polish** (11/11): React SPA, Cloudflare Pages, RUNBOOK, design system
 - 🔜 **Phase 7 — CI/CD** (0/5): GitHub Actions with OIDC
+
+### Frontend quickstart
+
+```bash
+cd frontend
+npm install
+npm run dev          # http://localhost:5173
+npm test             # vitest run
+npm run typecheck    # tsc --noEmit
+npm run lint
+npm run build        # vite build → dist/
+```
+
+See `frontend/RUNBOOK.md` for secrets, deploy procedure, and operational constraints.
 
 ---
 
