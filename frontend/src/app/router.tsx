@@ -19,6 +19,7 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 import { CategoriesAdminPage } from '@/pages/CategoriesAdminPage';
 import { ComingSoonPage } from '@/pages/ComingSoonPage';
 import { sessionStore, type Role } from '@/stores/sessionStore';
+import { AppShell } from '@/templates/AppShell';
 
 export interface RouterEnv {
   VITE_API_BASE_URL: string;
@@ -64,19 +65,24 @@ export function routerConfig({ env }: { env: RouterEnv }) {
     {
       element: <RequireAuth />,
       children: [
-        { path: '/', element: <Navigate to="/dashboard" replace /> },
-        { path: '/dashboard', element: <ComingSoonPage /> },
         {
-          // eslint-disable-next-line jsx-a11y/aria-role -- `role` is a regular prop, not an ARIA role
-          element: <RequireRole role="admin" />,
+          element: <AppShell />,
           children: [
+            { path: '/', element: <Navigate to="/dashboard" replace /> },
+            { path: '/dashboard', element: <ComingSoonPage /> },
             {
-              path: '/admin/categories',
-              element: <CategoriesAdminPage apiBaseUrl={env.VITE_API_BASE_URL} />,
+              // eslint-disable-next-line jsx-a11y/aria-role -- `role` is a regular prop, not an ARIA role
+              element: <RequireRole role="admin" />,
+              children: [
+                {
+                  path: '/admin/categories',
+                  element: <CategoriesAdminPage apiBaseUrl={env.VITE_API_BASE_URL} />,
+                },
+              ],
             },
+            { path: '*', element: <NotFoundPage /> },
           ],
         },
-        { path: '*', element: <NotFoundPage /> },
       ],
     },
   ];

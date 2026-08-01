@@ -1,60 +1,49 @@
-/**
- * AppShell template — Litografía del Sur.
- *
- * The signature chrome of every authenticated page (design §1.5):
- *  - 48px cobalt masthead with page name (Bricolage Grotesque), today's date
- *    (JetBrains Mono, right-aligned), and the HexStamp SVG.
- *  - Paper canvas with children content area.
- *
- * Templates receive content; they own no API calls (REQ-FF-ATOMS-BOUNDARY).
- */
 import type { ReactNode } from 'react';
+import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { HexStamp } from '@/atoms/HexStamp';
 import { RoleBadge } from '@/molecules/RoleBadge';
+import { Sidebar } from '@/organisms/Sidebar';
 import { ToastHost } from '@/organisms/ToastHost';
+import { sessionStore } from '@/stores/sessionStore';
 
 export interface AppShellProps {
-  pageName: string;
+  pageName?: string;
   role?: 'admin' | 'user';
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 function formatToday(): string {
-  // Compact ledger style: "01 ENE 2026". Locale-independent upper-case day+month.
   const months = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
   const now = new Date();
-  const dd = String(now.getDate()).padStart(2, '0');
-  const mm = months[now.getMonth()] ?? '';
-  return `${dd} ${mm} ${now.getFullYear()}`;
+  return `${String(now.getDate()).padStart(2, '0')} ${months[now.getMonth()] ?? ''} ${now.getFullYear()}`;
+}
+
+function derivePageName(path: string): string {
+  if (path === '/dashboard') return 'Tablero';
+  if (path === '/admin/categories') return 'Categorías';
+  return '';
 }
 
 export function AppShell({ pageName, role, children }: AppShellProps) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const currentRole = role ?? sessionStore.getState().role ?? null;
+  const resolvedPageName = pageName ?? derivePageName(location.pathname);
+
   return (
     <div className="min-h-screen bg-ink-paper text-ink-tinta font-body">
-      <header
-        data-testid="app-shell-masthead"
-        className="flex items-center justify-between bg-ink-cobalto px-6 text-ink-paper"
-        style={{ height: '48px' }}
-      >
-        <h1
-          className="font-display text-lg font-bold tracking-wide"
-          data-testid="app-shell-page-name"
-        >
-          {pageName}
-        </h1>
+      <header data-testid="app-shell-masthead" className="flex items-center justify-between bg-ink-cobalto px-6 text-ink-paper" style={{ height: '48px' }}>
+        <h1 className="font-display text-lg font-bold tracking-wide" data-testid="app-shell-page-name">{resolvedPageName}</h1>
         <div className="flex items-center gap-3">
-          {role ? <RoleBadge role={role} /> : null}
-          <span
-            data-testid="app-shell-date"
-            className="font-mono text-xs uppercase tracking-[0.2em]"
-            aria-label="Today's date"
-          >
-            {formatToday()}
-          </span>
+          {currentRole ? <RoleBadge role={currentRole} /> : null}
+          <span data-testid="app-shell-date" className="font-mono text-xs uppercase tracking-[0.2em]" aria-label="Today's date">{formatToday()}</span>
           <HexStamp />
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>
+      <div className="flex min-h-[calc(100vh-48px)]">
+        <Sidebar currentRole={currentRole} activePath={location.pathname} onNavigate={navigate} />
+        <main data-testid="app-shell-main" className="min-w-0 flex-1 px-6 py-8">{children ?? <Outlet />}</main>
+      </div>
       <ToastHost />
     </div>
   );

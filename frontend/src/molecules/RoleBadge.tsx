@@ -15,7 +15,6 @@ export function RoleBadge({ role }: RoleBadgeProps) {
   const label = role === 'admin' ? 'Admin' : 'User';
   return (
     <span
-      // eslint-disable-next-line jsx-a11y/aria-role -- decorative wrapper; Badge carries the visible signal
       role="status"
       aria-label={`Current role: ${label}`}
       data-testid="role-badge-wrapper"

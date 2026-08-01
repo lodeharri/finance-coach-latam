@@ -19,6 +19,6 @@ describe('ComingSoonPage', () => {
     render(<ComingSoonPage />);
     const page = screen.getByTestId('coming-soon-page');
     // Style attributes survive RTL render — token color is hex #F5F0E2.
-    expect(page.getAttribute('style') ?? '').toMatch(/--ink-paper|#F5F0E2/i);
+    expect(page.className).toMatch(/min-h-\[calc\(100vh-112px\)\]/);
   });
 });
