@@ -53,8 +53,10 @@ describe('UserForm', () => {
     expect(name).toBeInTheDocument();
     expect(name.value).toBe('');
 
-    const tier = screen.getByLabelText(/tier/i) as HTMLSelectElement;
-    expect(tier.value).toBe('BRONZE');
+    // Tier is rendered as an editorial radiogroup (custom radio squares).
+    expect(screen.getByRole('radio', { name: 'BRONZE' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: 'SILVER' })).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByRole('radio', { name: 'GOLD' })).toHaveAttribute('aria-checked', 'false');
   });
 
   it('email field accepts input', async () => {
@@ -75,20 +77,19 @@ describe('UserForm', () => {
     expect((name as HTMLInputElement).value).toBe('Jane Doe');
   });
 
-  it('tier select accepts BRONZE / SILVER / GOLD selections', async () => {
+  it('tier radio group accepts BRONZE / SILVER / GOLD selections', async () => {
     const user = userEvent.setup();
     wrap(<UserForm apiBaseUrl={BASE} />);
 
-    const tier = screen.getByLabelText(/tier/i) as HTMLSelectElement;
+    await user.click(screen.getByRole('radio', { name: 'SILVER' }));
+    expect(screen.getByRole('radio', { name: 'SILVER' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: 'BRONZE' })).toHaveAttribute('aria-checked', 'false');
 
-    await user.selectOptions(tier, 'SILVER');
-    expect(tier.value).toBe('SILVER');
+    await user.click(screen.getByRole('radio', { name: 'GOLD' }));
+    expect(screen.getByRole('radio', { name: 'GOLD' })).toHaveAttribute('aria-checked', 'true');
 
-    await user.selectOptions(tier, 'GOLD');
-    expect(tier.value).toBe('GOLD');
-
-    await user.selectOptions(tier, 'BRONZE');
-    expect(tier.value).toBe('BRONZE');
+    await user.click(screen.getByRole('radio', { name: 'BRONZE' }));
+    expect(screen.getByRole('radio', { name: 'BRONZE' })).toHaveAttribute('aria-checked', 'true');
   });
 
   it('submitting with empty email + empty name surfaces both field errors', async () => {
@@ -103,11 +104,11 @@ describe('UserForm', () => {
     // If it had, MSW would throw because there is no POST handler installed.
   });
 
-  it('HTML5 type=email validation blocks submission of malformed values (no custom handler fires)', async () => {
-    // The form input is type="email" + required. jsdom's HTMLFormElement gates
-    // the submit event on constraint validation, so a malformed value like
-    // "not-an-email" is rejected by the platform before our onSubmit runs.
-    // This test pins that contract: no POST is sent, no custom error renders.
+  it('submits a malformed email: JS validation catches it before POST (no POST fires)', async () => {
+    // The form has noValidate so HTML5 constraint validation does NOT gate the
+    // submit event. The molecule's own JS validation catches a value without
+    // an "@" before the mutation runs. This test pins that contract: no POST
+    // is sent, the custom error renders verbatim.
     let posts = 0;
     server.use(
       http.post(`${BASE}/users`, () => {
@@ -126,7 +127,7 @@ describe('UserForm', () => {
     // Give any queued requests a chance to flush.
     await new Promise((r) => setTimeout(r, 30));
     expect(posts).toBe(0);
-    expect(screen.queryByText(/email is required/i)).not.toBeInTheDocument();
+    expect(await screen.findByText(/email is required/i)).toBeInTheDocument();
   });
 
   it('submitting with a valid email but missing name surfaces only the name error', async () => {
@@ -181,7 +182,7 @@ describe('UserForm', () => {
 
     await user.type(screen.getByLabelText(/email/i), 'jane@example.com');
     await user.type(screen.getByLabelText(/name/i), 'Jane Doe');
-    await user.selectOptions(screen.getByLabelText(/tier/i), 'GOLD');
+    await user.click(screen.getByRole('radio', { name: 'GOLD' }));
     await user.click(screen.getByRole('button', { name: /add user/i }));
 
     await waitFor(() => expect(captured).not.toBeNull());

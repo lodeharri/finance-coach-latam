@@ -14,6 +14,10 @@
   --ink-paper: #f5f0e2;
   --ink-paper-lift: #faf6ea;
   --ink-paper-press: #e8e1cf;
+  /* Subtle paper-grain overlay color (translucent ink over paper). */
+  --ink-paper-grain: rgba(26, 24, 16, 0.045);
+  /* Hairline rule color (slightly darker than paper-press for engraved rules). */
+  --ink-hairline: rgba(27, 31, 38, 0.18);
 
   /* Inks — text */
   --ink-tinta: #1b1f26;
@@ -52,6 +56,8 @@
   --text-xl: 1.75rem;
   --text-2xl: 2.5rem;
   --text-3xl: 4rem;
+  /* Hero display — used for the DashboardPage big number (signature). */
+  --text-4xl: 6.5rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

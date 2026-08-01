@@ -24,6 +24,8 @@ interface TransactionProbe {
   create: ReturnType<typeof useCreateTransaction>['mutate'];
   update: ReturnType<typeof useUpdateTransaction>['mutate'];
   recategorize: ReturnType<typeof useRecategorizeTransaction>['mutate'];
+  recategorizeError: Error | null;
+  recategorizeIsError: boolean;
 }
 
 function Probe({
@@ -39,7 +41,14 @@ function Probe({
   const create = useCreateTransaction({ apiBaseUrl: BASE });
   const update = useUpdateTransaction({ apiBaseUrl: BASE });
   const recategorize = useRecategorizeTransaction({ apiBaseUrl: BASE });
-  onReady({ list, create: create.mutate, update: update.mutate, recategorize: recategorize.mutate });
+  onReady({
+    list,
+    create: create.mutate,
+    update: update.mutate,
+    recategorize: recategorize.mutate,
+    recategorizeError: recategorize.error,
+    recategorizeIsError: recategorize.isError,
+  });
   return (
     <div>
       <span data-testid="pending">{String(list.isPending)}</span>
@@ -140,7 +149,21 @@ describe('useTransactions', () => {
       }),
       http.post('https://api.example.test/transactions', () => {
         created = true;
-        return HttpResponse.json({ id: 't-new' }, { status: 201 });
+        return HttpResponse.json(
+          {
+            id: 't-new',
+            userId: 'u1',
+            accountId: 'a1',
+            categoryId: null,
+            merchant: 'M',
+            amountCents: 100,
+            occurredAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            status: 'PENDING',
+            notes: null,
+          },
+          { status: 201 },
+        );
       }),
     );
 
@@ -183,7 +206,21 @@ describe('useTransactions', () => {
       http.get('https://api.example.test/transactions', () => HttpResponse.json([])),
       http.post('https://api.example.test/transactions/t1/categorize', ({ request }) => {
         categorizePath = new URL(request.url).pathname;
-        return HttpResponse.json({ id: 't1' });
+        // Full Transaction — apiClient parses /transactions/* through
+        // TransactionSchema, so a partial response is a validation_error.
+        // Same shape as the create-transaction mock above (REL-002).
+        return HttpResponse.json({
+          id: 't1',
+          userId: 'u1',
+          accountId: 'a1',
+          categoryId: 'c2',
+          merchant: 'M',
+          amountCents: 100,
+          occurredAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          status: 'CATEGORIZED',
+          notes: null,
+        });
       }),
     );
 
@@ -193,5 +230,41 @@ describe('useTransactions', () => {
       api.recategorize({ transactionId: 't1' });
     });
     await waitFor(() => expect(categorizePath).toBe('/transactions/t1/categorize'));
+  });
+
+  it('useRecategorizeTransaction parses the full Transaction response (REL-002)', async () => {
+    // apiClient dispatches /transactions/* responses through TransactionSchema.
+    // A partial mock (e.g. { id: 't1' }) makes the mutation throw a
+    // validation_error. Pin the success contract here — the mock mirrors the
+    // create-transaction mock at lines 143-157 (REL-002).
+    server.use(
+      http.get('https://api.example.test/transactions', () => HttpResponse.json([])),
+      http.post('https://api.example.test/transactions/t1/categorize', () =>
+        HttpResponse.json({
+          id: 't1',
+          userId: 'u1',
+          accountId: 'a1',
+          categoryId: 'c2',
+          merchant: 'M',
+          amountCents: 100,
+          occurredAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          status: 'CATEGORIZED',
+          notes: null,
+        }),
+      ),
+    );
+
+    let api!: TransactionProbe;
+    wrap(<Probe onReady={(a) => (api = a)} />);
+    await act(async () => {
+      api.recategorize({ transactionId: 't1' });
+    });
+    // The mutation must resolve cleanly — no validation_error from a partial
+    // /transactions/{id}/categorize response. apiClient routes every
+    // /transactions/* response through TransactionSchema which requires 10
+    // fields (REL-002).
+    await waitFor(() => expect(api.recategorizeIsError).toBe(false));
+    expect(api.recategorizeError).toBeNull();
   });
 });

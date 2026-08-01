@@ -1,6 +1,11 @@
 /**
  * TransactionsPage — Litografía del Sur.
  *
+ * Editorial treatment:
+ * - Kicker `LIBRO DIARIO · 2026` in mono caps above the page title.
+ * - Row count strip `042 MOVIMIENTOS` in mono on the right of the header.
+ * - Asterism caption above the form section.
+ *
  * Lists transactions for the current user (or admin-targeted userId via
  * query string). Composes TransactionTable + TransactionForm. ForbiddenPage
  * for 403, loading/empty/error states reuse foundation patterns.
@@ -38,14 +43,22 @@ export function TransactionsPage({ apiBaseUrl }: TransactionsPageProps) {
   }
 
   return (
-    <section className="flex flex-col gap-6">
-      <header className="flex items-baseline justify-between">
-        <h1 className="font-display text-2xl font-bold text-ink-tinta">
-          {isAdminTarget ? `Transactions for ${userId}` : 'My transactions'}
-        </h1>
-        <span className="font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta-mute">
-          {rows.length} {rows.length === 1 ? 'row' : 'rows'}
+    <section className="flex flex-col gap-8">
+      <header className="flex flex-col gap-2" data-testid="transactions-page-header">
+        <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-tinta-mute">
+          LIBRO DIARIO · 2026
         </span>
+        <div className="flex items-baseline justify-between gap-4">
+          <h1 className="font-display text-2xl font-bold text-ink-tinta">
+            {isAdminTarget ? `Transactions for ${userId}` : 'My transactions'}
+          </h1>
+          <span
+            className="font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta-mute"
+            data-testid="row-count"
+          >
+            {String(rows.length).padStart(3, '0')} MOVIMIENTOS
+          </span>
+        </div>
       </header>
       <TransactionTable
         apiBaseUrl={apiBaseUrl}
@@ -55,8 +68,13 @@ export function TransactionsPage({ apiBaseUrl }: TransactionsPageProps) {
         onOverride={(transactionId, categoryId) => updateTx.mutate({ transactionId, categoryId })}
         onRecategorize={(transactionId) => recategorize.mutate({ transactionId })}
       />
-      <section className="mt-6">
-        <h2 className="font-display text-lg font-bold text-ink-tinta">Log a new transaction</h2>
+      <section className="mt-2">
+        <header className="mb-4 flex items-baseline justify-between">
+          <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-tinta-mute">
+            * * *&nbsp;&nbsp;NUEVO MOVIMIENTO
+          </span>
+          <h2 className="font-display text-lg font-bold text-ink-tinta">Log a new transaction</h2>
+        </header>
         <TransactionForm apiBaseUrl={apiBaseUrl} userId={userId} />
       </section>
     </section>

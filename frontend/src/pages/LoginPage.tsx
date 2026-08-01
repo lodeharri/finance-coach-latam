@@ -49,11 +49,12 @@ export function LoginPage({ env }: LoginPageProps) {
 
   return (
     <AuthShell title="Sign in">
-      <form onSubmit={onSubmit} className="flex flex-col gap-4" data-testid="login-form">
+      <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5" data-testid="login-form">
         <FormField
           id="email"
           label="Email"
           type="email"
+          variant="editorial"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -63,6 +64,7 @@ export function LoginPage({ env }: LoginPageProps) {
           id="password"
           label="Password"
           type="password"
+          variant="editorial"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required

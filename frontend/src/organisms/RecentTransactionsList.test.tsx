@@ -83,6 +83,15 @@ describe('RecentTransactionsList', () => {
     await waitFor(() => expect(screen.getByTestId('recent-empty')).toBeInTheDocument());
   });
 
+  it('renders the editorial kicker above the list (signature)', async () => {
+    server.use(
+      http.get(`${BASE}/transactions`, () => HttpResponse.json([tx({ id: 'a' })])),
+    );
+    wrap(<RecentTransactionsList apiBaseUrl={BASE} />);
+    await waitFor(() => expect(screen.getByTestId('recent-kicker')).toBeInTheDocument());
+    expect(screen.getByTestId('recent-kicker').textContent).toMatch(/ACTIVIDAD/);
+  });
+
   it('navigates to /transactions when a row is clicked', async () => {
     server.use(
       http.get(`${BASE}/transactions`, () => HttpResponse.json([tx({ id: 'a' })])),

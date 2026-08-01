@@ -1,9 +1,11 @@
 /**
  * MonthlySparkline chart — Litografía del Sur.
  *
- * 6-month trailing window. Recharts LineChart with a cobalt dot at the
- * current month. JetBrains Mono month labels. Empty state when fewer than
- * 2 data points (no chart, no zero).
+ * Editorial treatment:
+ * - Asterism caption `* * *  ÚLTIMOS 6 MESES  * * *` in mono caps (signature).
+ * - 6-month trailing window. Recharts LineChart with a cobalt dot at the
+ *   current month. JetBrains Mono month labels. Empty state when fewer than
+ *   2 data points (no chart, no zero).
  */
 import { useEffect, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceDot } from 'recharts';
@@ -44,33 +46,42 @@ export function MonthlySparkline({ data, width = 320, height = 200 }: MonthlySpa
   const last = data[data.length - 1];
 
   return (
-    <div data-testid="monthly-sparkline" style={{ width, height }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={[...data]}>
-          <XAxis
-            dataKey="month"
-            tick={{ fill: '#4a4f5a', fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}
-            stroke="#8a8678"
-          />
-          <YAxis hide />
-          <Tooltip
-            formatter={(value) => Number(value ?? 0).toLocaleString('es-AR')}
-            labelStyle={{ fontFamily: 'JetBrains Mono, monospace' }}
-          />
-          <Line
-            type="monotone"
-            dataKey="totalCents"
-            stroke="#1f3fb8"
-            strokeWidth={2}
-            dot={false}
-            activeDot={{ r: 4, fill: '#1f3fb8' }}
-          />
-          {last ? (
-            <ReferenceDot x={last.month} y={last.totalCents} r={4} fill="#1f3fb8" />
-          ) : null}
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
+    <figure className="flex flex-col gap-3">
+      <figcaption
+        aria-hidden="true"
+        data-testid="sparkline-caption"
+        className="text-center font-mono text-[10px] uppercase tracking-[0.3em] text-ink-tinta-mute"
+      >
+        * * *&nbsp;&nbsp;ÚLTIMOS {data.length} MESES&nbsp;&nbsp;* * *
+      </figcaption>
+      <div data-testid="monthly-sparkline" style={{ width, height }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={[...data]}>
+            <XAxis
+              dataKey="month"
+              tick={{ fill: '#4a4f5a', fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}
+              stroke="#8a8678"
+            />
+            <YAxis hide />
+            <Tooltip
+              formatter={(value) => Number(value ?? 0).toLocaleString('es-AR')}
+              labelStyle={{ fontFamily: 'JetBrains Mono, monospace' }}
+            />
+            <Line
+              type="monotone"
+              dataKey="totalCents"
+              stroke="#1f3fb8"
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4, fill: '#1f3fb8' }}
+            />
+            {last ? (
+              <ReferenceDot x={last.month} y={last.totalCents} r={4} fill="#1f3fb8" />
+            ) : null}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </figure>
   );
 }
 

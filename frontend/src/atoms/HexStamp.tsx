@@ -1,24 +1,47 @@
 /**
  * HexStamp atom — Litografía del Sur signature element.
  *
- * 16x16 inline SVG hexagonal lattice in cobalt. Decorative; aria-hidden.
+ * Hand-drawn hexagonal lattice in cobalt ink. Decorative; aria-hidden.
  * Anchors the cobalt masthead as the "system integrity" stamp (design §1.5).
  * Atoms have no state, no API.
+ *
+ * Three sizes are supported: sm (16px — sidebar/chrome), md (24px — masthead),
+ * lg (40px — auth plate). The shape and lattice never change; the size scales
+ * the viewBox-uniform polygons uniformly.
  */
 
 /**
  * A hexagonal lattice of 7 hexes (center + 6 around) drawn in the cobalt ink.
  * Coordinates are hand-computed for a 16x16 viewBox at unit-hex radius = 3.
  */
-export function HexStamp() {
+export type HexStampSize = 'sm' | 'md' | 'lg';
+
+export interface HexStampProps {
+  size?: HexStampSize;
+  /** Optional accessible label override; default aria-hidden. */
+  title?: string;
+}
+
+const SIZE_PX: Record<HexStampSize, number> = {
+  sm: 16,
+  md: 24,
+  lg: 40,
+};
+
+export function HexStamp({ size = 'sm', title }: HexStampProps) {
+  const px = SIZE_PX[size];
   return (
     <svg
-      width="16"
-      height="16"
+      width={px}
+      height={px}
       viewBox="0 0 16 16"
-      aria-hidden="true"
+      aria-hidden={title ? undefined : 'true'}
+      role={title ? 'img' : undefined}
+      aria-label={title}
+      data-testid="hex-stamp"
       style={{ color: 'var(--ink-cobalto)', display: 'inline-block' }}
     >
+      {title ? <title>{title}</title> : null}
       {/* Center hex */}
       <polygon points="8,3 11.2,5 11.2,9 8,11 4.8,9 4.8,5" fill="currentColor" />
       {/* Top */}

@@ -26,13 +26,13 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
-  sm: 'h-8 px-3 text-sm',
-  md: 'h-10 px-4 text-md',
-  lg: 'h-12 px-6 text-lg',
+  sm: 'h-8 px-3 font-mono text-xs uppercase tracking-[0.2em]',
+  md: 'h-10 px-4 font-body text-md',
+  lg: 'h-12 px-6 font-body text-lg',
 };
 
 const BASE_CLASSES =
-  'inline-flex items-center justify-center gap-2 rounded font-body font-medium ' +
+  'inline-flex items-center justify-center gap-2 rounded-sm font-medium ' +
   'transition-[background-color,opacity] duration-fast ' +
   'focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-cobalto focus-visible:ring-offset-2 focus-visible:ring-offset-ink-paper ' +
   'disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none';
