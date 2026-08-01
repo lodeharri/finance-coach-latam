@@ -17,7 +17,7 @@ export interface FormFieldProps {
   required?: boolean;
   disabled?: boolean;
   /** Backend {message} or {details} string; rendered verbatim. */
-  error?: string;
+  error?: string | undefined;
   placeholder?: string;
   autoComplete?: string;
 }
