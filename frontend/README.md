@@ -2,7 +2,33 @@
 
 The frontend SPA for [Finance Coach LATAM](../README.md). React 18 + Vite + TypeScript strict + Tailwind 3 + Atomic Design, deployed on Cloudflare Pages (free tier), consuming the AWS-backed HTTP API v2 with direct `Authorization: Bearer <IdToken>` over the existing Cognito authorizer. Backend contract (categories, transactions, accounts, users, JWT shape) is unchanged — the SPA is a pure consumer of the `authorization`, `admin-categories`, and `transaction-categorization` specs.
 
-> Dev server proxies `/api/*` to `http://localhost:3000` (the local backend) so `npm run dev` works without going through the production CORS allow-list. See `vite.config.ts` `server.proxy`.
+## Local development
+
+The SPA talks directly to the deployed API at the URL in `VITE_API_BASE_URL` (full URL — there is no `/api` proxy). In CI, that URL is injected by `.github/workflows/deploy-staging.yml` and `deploy-production.yml` from the `cdk deploy` output. Locally, you point the SPA at a backend yourself via `frontend/.env.local`. Vite reads `.env.local` automatically at `npm run dev` and `npm run build`; the file is gitignored.
+
+```bash
+cd frontend
+
+# 1. Copy the template.
+cp .env.example .env.local
+
+# 2. Edit .env.local and set VITE_API_BASE_URL to your backend.
+#    For most local dev, use a deployed staging URL — the backend is not
+#    run on localhost by default. The format is:
+#      https://<api-id>.execute-api.<region>.amazonaws.com
+#    Cognito vars are optional in dev (safe defaults are used when unset).
+
+# 3. Install dependencies.
+npm install
+
+# 4. Start the dev server.
+npm run dev          # http://localhost:5173
+```
+
+CORS: `http://localhost:5173` is already in the backend's `ALLOWED_ORIGINS` allowlist (per PR #36, alongside `https://finance-coach-latam.pages.dev`), so the dev server can call the API without extra configuration. **Note:** Cloudflare Pages preview URLs (`feat-*.finance-coach-latam.pages.dev`) are NOT in the allowlist yet — preview-deploy testing will hit CORS rejection until that is widened (tracked as a follow-up, intentionally out of scope for this PR).
+
+Build behavior: `npm run build` reads env from the process environment / CI, not from `.env.local`. CI sets `VITE_API_BASE_URL` explicitly (see deploy workflows) and fails the build when it is empty, so a missing URL never reaches production.
+
 ## Stack
 
 - **Build / runtime**: Vite 5, React 18, TypeScript strict (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`).
