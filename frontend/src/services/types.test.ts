@@ -155,6 +155,55 @@ describe('TransactionSchema', () => {
       }),
     ).toThrow();
   });
+
+  it('normalizes legacy amount field to amountCents', () => {
+    const t = TransactionSchema.parse({
+      id: 't1',
+      userId: 'u1',
+      accountId: 'a1',
+      categoryId: null,
+      merchant: 'Cafe',
+      amount: 4200,
+      occurredAt: '2026-01-15T12:00:00.000Z',
+      createdAt: '2026-01-15T12:00:01.000Z',
+      status: 'PENDING',
+      notes: null,
+    });
+    expect(t.amountCents).toBe(4200);
+  });
+
+  it('prefers amountCents when both are present', () => {
+    const t = TransactionSchema.parse({
+      id: 't1',
+      userId: 'u1',
+      accountId: 'a1',
+      categoryId: null,
+      merchant: 'Cafe',
+      amount: 1000,
+      amountCents: 2000,
+      occurredAt: '2026-01-15T12:00:00.000Z',
+      createdAt: '2026-01-15T12:00:01.000Z',
+      status: 'PENDING',
+      notes: null,
+    });
+    expect(t.amountCents).toBe(2000);
+  });
+
+  it('strips amount from output after normalization', () => {
+    const t = TransactionSchema.parse({
+      id: 't1',
+      userId: 'u1',
+      accountId: 'a1',
+      categoryId: null,
+      merchant: 'Cafe',
+      amount: 4200,
+      occurredAt: '2026-01-15T12:00:00.000Z',
+      createdAt: '2026-01-15T12:00:01.000Z',
+      status: 'PENDING',
+      notes: null,
+    });
+    expect((t as Record<string, unknown>).amount).toBeUndefined();
+  });
 });
 
 describe('UserSchema', () => {

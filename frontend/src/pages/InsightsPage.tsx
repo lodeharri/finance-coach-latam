@@ -1,12 +1,19 @@
 /**
  * InsightsPage — Litografía del Sur.
  *
- * 12-month line chart as the visual centerpiece (signature element).
- * Sortable breakdown table (total | Δ% | Δ absolute | count). Top 10
- * merchants (name + amount + count + dominant category pill). Period
- * selector (`Este mes | Mes pasado | Últimos 3 meses | Últimos 6 meses |
- * Últimos 12 meses`). Active-voice empty state with CTA to /transactions.
- * Skeletons for chart + table while loading.
+ * Editorial treatment:
+ * - Kicker `TENDENCIAS · 12 MESES` above the page title.
+ * - Custom period selector as a strip of mono caps pills (signature: broadsheet
+ *   nav, not a dropdown). Active state in cobalt-on-paper.
+ * - Asterism captions between sections (already in chart organisms).
+ * - Em-dash in the Δ% / Δ abs columns when not yet computed (editorial
+ *   restraint: no fake number).
+ * - Sortable column heads with `▲` / `▼` markers.
+ * - Active-voice empty state with a cobalt underline CTA link to /transactions.
+ *
+ * 12-month line chart as the visual centerpiece. Sortable breakdown table
+ * (total | Δ% | Δ absolute | count). Top 10 merchants (name + amount + count
+ * + dominant category pill).
  */
 import { useMemo, useState } from 'react';
 import { lazy, Suspense } from 'react';
@@ -23,13 +30,13 @@ const MonthlySparkline = lazy(() =>
 );
 
 type Period = 'this_month' | 'last_month' | 'last_3' | 'last_6' | 'last_12';
-const PERIOD_LABELS: Record<Period, string> = {
-  this_month: 'Este mes',
-  last_month: 'Mes pasado',
-  last_3: 'Últimos 3 meses',
-  last_6: 'Últimos 6 meses',
-  last_12: 'Últimos 12 meses',
-};
+const PERIODS: Array<{ value: Period; label: string }> = [
+  { value: 'this_month', label: 'Este mes' },
+  { value: 'last_month', label: 'Mes pasado' },
+  { value: 'last_3', label: 'Últimos 3' },
+  { value: 'last_6', label: 'Últimos 6' },
+  { value: 'last_12', label: 'Últimos 12' },
+];
 
 function periodStart(period: Period, now: Date): Date {
   switch (period) {
@@ -82,7 +89,10 @@ export function InsightsPage({ apiBaseUrl }: InsightsPageProps) {
     if (rows.length === 0) return rows;
     const start = periodStart(period, new Date());
     return rows.filter((tx) => {
-      if (tx.status !== 'CATEGORIZED') return false;
+      // Exclude only FAILED — PENDING is real spend the categorizer hasn't
+      // labeled yet. Same rule as dashboard-stats.ts so Dashboard MTD and
+      // Insights totals never disagree for the same user (REL-001).
+      if (tx.status === 'FAILED') return false;
       const occurred = new Date(tx.occurredAt);
       return occurred >= start;
     });
@@ -116,9 +126,6 @@ export function InsightsPage({ apiBaseUrl }: InsightsPageProps) {
       let cmp = 0;
       if (sortKey === 'total') cmp = a.totalCents - b.totalCents;
       else if (sortKey === 'count') cmp = a.count - b.count;
-      // deltaPct and deltaAbs are stubbed to 0 here — without a comparison
-      // window we cannot compute a meaningful delta. They are still surfaced
-      // as columns so the UI contract holds.
       cmp = sortDir === 'asc' ? cmp : -cmp;
       return cmp;
     });
@@ -165,7 +172,10 @@ export function InsightsPage({ apiBaseUrl }: InsightsPageProps) {
       const next = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
       const total = (transactions.data ?? [])
         .filter((tx) => {
-          if (tx.status !== 'CATEGORIZED') return false;
+          // Same rule as the period filter above: include CATEGORIZED + PENDING,
+          // exclude FAILED. Keeps Insights 12-month trend in parity with the
+          // Dashboard sparkline (REL-001).
+          if (tx.status === 'FAILED') return false;
           const occurred = new Date(tx.occurredAt);
           return occurred >= d && occurred < next;
         })
@@ -176,84 +186,184 @@ export function InsightsPage({ apiBaseUrl }: InsightsPageProps) {
   }, [transactions.data]);
 
   return (
-    <section className="flex flex-col gap-6">
-      <header className="flex items-baseline justify-between">
-        <h1 className="font-display text-2xl font-bold text-ink-tinta">Insights</h1>
-        <select
-          value={period}
-          onChange={(e) => setPeriod(e.target.value as Period)}
-          data-testid="insights-period"
+    <section className="flex flex-col gap-8">
+      <header className="flex flex-col gap-3" data-testid="insights-page-header">
+        <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-tinta-mute">
+          TENDENCIAS · 12 MESES
+        </span>
+        <div className="flex items-baseline justify-between gap-4">
+          <h1 className="font-display text-2xl font-bold text-ink-tinta">Insights</h1>
+        </div>
+        <div
+          className="flex flex-wrap items-stretch gap-px overflow-hidden rounded-sm border border-ink-paper-press bg-ink-paper-press"
+          role="group"
           aria-label="Period"
-          className="h-10 rounded-sm border border-ink-paper-press bg-ink-paper-lift px-3 font-body text-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-cobalto"
+          data-testid="insights-period"
         >
-          {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
-            <option key={p} value={p}>{PERIOD_LABELS[p]}</option>
-          ))}
-        </select>
+          {PERIODS.map((p) => {
+            const active = period === p.value;
+            return (
+              <button
+                key={p.value}
+                type="button"
+                onClick={() => setPeriod(p.value)}
+                aria-pressed={active}
+                className={
+                  'inline-flex flex-1 items-center justify-center px-3 py-2 font-mono text-xs uppercase tracking-[0.2em] ' +
+                  'transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-cobalto ' +
+                  (active
+                    ? 'bg-ink-cobalto text-ink-paper'
+                    : 'bg-ink-paper-lift text-ink-tinta hover:bg-ink-paper')
+                }
+                data-testid={`period-${p.value}`}
+              >
+                {p.label}
+              </button>
+            );
+          })}
+        </div>
       </header>
 
       {filtered.length === 0 ? (
-        <div className="rounded-sm border border-ink-paper-press bg-ink-paper-lift p-6" data-testid="insights-empty">
-          <h2 className="font-display text-lg font-bold text-ink-tinta">No data for this period yet.</h2>
+        <section
+          className="rounded-sm border border-dashed border-ink-paper-press bg-ink-paper-lift p-10 text-center"
+          data-testid="insights-empty"
+        >
+          <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-tinta-mute">
+            SIN DATOS PARA ESTE PERÍODO
+          </p>
+          <p className="mt-4 font-display text-2xl italic text-ink-tinta">
+            Aún no hay suficiente historia.
+          </p>
           <p className="mt-2 font-body text-md text-ink-tinta-soft">
             Log a transaction to see your monthly trend and category breakdown here.
           </p>
           <Link
             to="/transactions"
-            className="mt-4 inline-block rounded-sm bg-ink-cobalto px-4 py-2 font-body text-md text-ink-paper hover:bg-ink-cobalto-deep focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-cobalto"
+            className="mt-4 inline-block font-display text-md text-ink-cobalto underline-offset-4 hover:underline"
           >
-            Log a transaction
+            Log a transaction →
           </Link>
-        </div>
+        </section>
       ) : (
         <>
           <div>
-            <h2 className="font-display text-lg font-bold text-ink-tinta">12-month trend</h2>
+            <header className="mb-4 flex items-baseline justify-between">
+              <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-tinta-mute">
+                * * *&nbsp;&nbsp;EJE TEMPORAL · 12 MESES
+              </span>
+              <h2 className="font-display text-lg font-bold text-ink-tinta">12-month trend</h2>
+            </header>
             <Suspense fallback={<ChartSkeleton />}>
               <MonthlySparkline data={trend} width={640} height={280} />
             </Suspense>
           </div>
 
           <div>
-            <h2 className="font-display text-lg font-bold text-ink-tinta">Breakdown by category</h2>
+            <header className="mb-4 flex items-baseline justify-between">
+              <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-tinta-mute">
+                * * *&nbsp;&nbsp;DESGLOSE
+              </span>
+              <h2 className="font-display text-lg font-bold text-ink-tinta">Breakdown by category</h2>
+            </header>
             <table className="w-full border-collapse font-body text-md" data-testid="breakdown-table">
               <thead>
                 <tr className="border-b-2 border-ink-tinta text-left">
-                  <th scope="col" className="py-2 pr-4 font-mono text-xs uppercase tracking-wide text-ink-tinta-mute">Category</th>
-                  <th scope="col" className="py-2 pr-4 text-right font-mono text-xs uppercase tracking-wide text-ink-tinta-mute">
-                    <button type="button" onClick={() => { setSortKey('total'); setSortDir(sortDir === 'asc' ? 'desc' : 'asc'); }}>
-                      Total
+                  <th
+                    scope="col"
+                    className="py-2 pr-4 font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta"
+                  >
+                    Category
+                  </th>
+                  <th
+                    scope="col"
+                    className="py-2 pr-4 text-right font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSortKey('total');
+                        setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+                      }}
+                      className="font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta hover:text-ink-cobalto"
+                    >
+                      Total {sortKey === 'total' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
                     </button>
                   </th>
-                  <th scope="col" className="py-2 pr-4 text-right font-mono text-xs uppercase tracking-wide text-ink-tinta-mute">
-                    <button type="button" onClick={() => { setSortKey('deltaPct'); setSortDir(sortDir === 'asc' ? 'desc' : 'asc'); }}>
-                      Δ%
+                  <th
+                    scope="col"
+                    className="py-2 pr-4 text-right font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSortKey('deltaPct');
+                        setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+                      }}
+                      className="font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta hover:text-ink-cobalto"
+                    >
+                      Δ% {sortKey === 'deltaPct' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
                     </button>
                   </th>
-                  <th scope="col" className="py-2 pr-4 text-right font-mono text-xs uppercase tracking-wide text-ink-tinta-mute">
-                    <button type="button" onClick={() => { setSortKey('deltaAbs'); setSortDir(sortDir === 'asc' ? 'desc' : 'asc'); }}>
-                      Δ abs
+                  <th
+                    scope="col"
+                    className="py-2 pr-4 text-right font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSortKey('deltaAbs');
+                        setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+                      }}
+                      className="font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta hover:text-ink-cobalto"
+                    >
+                      Δ abs {sortKey === 'deltaAbs' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
                     </button>
                   </th>
-                  <th scope="col" className="py-2 pr-4 text-right font-mono text-xs uppercase tracking-wide text-ink-tinta-mute">
-                    <button type="button" onClick={() => { setSortKey('count'); setSortDir(sortDir === 'asc' ? 'desc' : 'asc'); }}>
-                      Count
+                  <th
+                    scope="col"
+                    className="py-2 pr-4 text-right font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSortKey('count');
+                        setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+                      }}
+                      className="font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta hover:text-ink-cobalto"
+                    >
+                      Count {sortKey === 'count' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
                     </button>
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {sortedBreakdown.map((row) => (
-                  <tr key={row.categoryId} className="border-b border-ink-paper-press" data-testid={`breakdown-row-${row.categoryId}`}>
+                  <tr
+                    key={row.categoryId}
+                    className="border-b border-ink-hairline"
+                    data-testid={`breakdown-row-${row.categoryId}`}
+                  >
                     <td className="py-2 pr-4">
-                      <CategoryPill slug={row.categoryId} name={row.name} color={row.color} />
+                      <span
+                        className="inline-block border-l-4 pl-3"
+                        style={{ borderLeftColor: row.color }}
+                      >
+                        <CategoryPill slug={row.categoryId} name={row.name} color={row.color} />
+                      </span>
                     </td>
                     <td className="py-2 pr-4 text-right">
                       <AmountText amountCents={row.totalCents} currency="ARS" />
                     </td>
-                    <td className="py-2 pr-4 text-right text-ink-tinta-mute">—</td>
-                    <td className="py-2 pr-4 text-right text-ink-tinta-mute">—</td>
-                    <td className="py-2 pr-4 text-right font-mono text-sm text-ink-tinta">{row.count}</td>
+                    <td className="py-2 pr-4 text-right font-mono text-sm text-ink-tinta-mute">
+                      —
+                    </td>
+                    <td className="py-2 pr-4 text-right font-mono text-sm text-ink-tinta-mute">
+                      —
+                    </td>
+                    <td className="py-2 pr-4 text-right font-mono text-sm text-ink-tinta">
+                      {row.count}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -261,24 +371,36 @@ export function InsightsPage({ apiBaseUrl }: InsightsPageProps) {
           </div>
 
           <div>
-            <h2 className="font-display text-lg font-bold text-ink-tinta">Top merchants</h2>
+            <header className="mb-4 flex items-baseline justify-between">
+              <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-tinta-mute">
+                * * *&nbsp;&nbsp;COMERCIOS TOP
+              </span>
+              <h2 className="font-display text-lg font-bold text-ink-tinta">Top merchants</h2>
+            </header>
             <ul className="flex flex-col" data-testid="top-merchants">
               {topMerchants.map((m, idx) => (
                 <li
                   key={m.merchant}
                   data-testid={`merchant-row-${idx}`}
-                  className="grid grid-cols-12 items-center gap-3 border-b border-ink-paper-press py-2"
+                  className="grid grid-cols-12 items-center gap-3 border-b border-ink-hairline py-3"
                 >
-                  <span className="col-span-5 font-body text-md text-ink-tinta">{m.merchant}</span>
+                  <span className="col-span-1 font-mono text-xs text-ink-cobalto">
+                    N.º {String(idx + 1).padStart(3, '0')}
+                  </span>
+                  <span className="col-span-4 font-display text-md text-ink-tinta">{m.merchant}</span>
                   <span className="col-span-3 text-right">
                     <AmountText amountCents={m.totalCents} currency="ARS" />
                   </span>
-                  <span className="col-span-1 text-right font-mono text-sm text-ink-tinta-mute">{m.count}</span>
+                  <span className="col-span-1 text-right font-mono text-sm text-ink-tinta-mute">
+                    {m.count}
+                  </span>
                   <span className="col-span-3 text-right">
                     {m.categoryId && m.categoryName && m.categoryColor ? (
                       <CategoryPill slug={m.categoryId} name={m.categoryName} color={m.categoryColor} />
                     ) : (
-                      <span className="font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta-mute">—</span>
+                      <span className="font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta-mute">
+                        —
+                      </span>
                     )}
                   </span>
                 </li>

@@ -28,6 +28,31 @@ describe('AppShell', () => {
 
   it('renders the role-aware sidebar', () => {
     renderShell('/dashboard', 'admin');
-    expect(screen.getByRole('link', { name: 'Categorías' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /categorías/i })).toBeInTheDocument();
+  });
+
+  it('renders the engraved folio strip in the masthead (signature element)', () => {
+    renderShell('/transactions');
+    const folio = screen.getByTestId('app-shell-folio');
+    expect(folio.textContent).toMatch(/VOL\. III/);
+    expect(folio.textContent).toMatch(/FOLIO/);
+    expect(folio.className).toMatch(/font-mono/);
+    expect(folio.className).toMatch(/tracking-\[0\.3em\]/);
+  });
+
+  it('changes the folio per route', () => {
+    renderShell('/insights');
+    expect(screen.getByTestId('app-shell-folio').textContent).toMatch(/FOLIO 07/);
+  });
+
+  it('the masthead has a 1 px hairline beneath it', () => {
+    renderShell();
+    expect(screen.getByTestId('app-shell-masthead')).toHaveClass('border-b');
+  });
+
+  it('the main area has asymmetric padding (pl-12 pr-20 on md+)', () => {
+    renderShell();
+    expect(screen.getByTestId('app-shell-main').className).toMatch(/px-12/);
+    expect(screen.getByTestId('app-shell-main').className).toMatch(/md:pr-20/);
   });
 });

@@ -44,7 +44,8 @@ describe('Button', () => {
         Small
       </Button>,
     );
-    expect(screen.getByRole('button').className).toMatch(/h-8|text-sm/);
+    // sm is editorial: mono caps, tracking-2em, h-8.
+    expect(screen.getByRole('button').className).toMatch(/h-8|font-mono|tracking-\[0\.2em\]/);
 
     rerender(
       <Button size="lg" onClick={() => {}}>

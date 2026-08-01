@@ -7,15 +7,23 @@
  *  - 403 -> surfaces `forbidden` code (page templates handle 403).
  *  - 5xx -> returns `server_error` (retryable toast).
  *  - Network failure -> returns `network_error` (retryable toast).
- *  - Successful JSON -> parses + returns `{ok:true, data}`.
+ *  - Successful JSON -> parses + runs through the zod entity schema for the
+ *    URL path, then returns `{ok:true, data}`. If the response fails the
+ *    schema, surfaces `validation_error` so callers can show a precise toast.
+ *  - 204 / non-JSON 2xx -> returns `{ok:true, data: null}` (no parse).
  *
  * Notes:
  *  - We never re-validate the JWT in the SPA — the API Gateway already did.
  *  - We never retry mutating requests (POST/PATCH/DELETE) automatically.
  *    GETs are not retried here either; TanStack Query handles retries at the
  *    higher cache layer for idempotent reads.
+ *  - The schema parse is dispatched by URL path (first segment matches a
+ *    known entity: /transactions, /accounts, /categories, /users). Unknown
+ *    paths pass through unchanged so we don't couple this layer to endpoints
+ *    it doesn't know.
  */
 import { sessionStore } from '@/stores/sessionStore';
+import { AccountSchema, CategorySchema, TransactionSchema, UserSchema } from './types';
 
 // Pull the synchronous session state — apiClient is called from imperative code
 // (TanStack Query fetcher, auth actions) so we read from the Zustand store
@@ -45,6 +53,7 @@ export type ApiErrorCode =
   | 'conflict'
   | 'server_error'
   | 'network_error'
+  | 'validation_error'
   | 'unknown';
 
 export function isSuccess<T>(r: ApiResult<T>): r is ApiSuccess<T> {
@@ -118,14 +127,59 @@ async function send<T>(method: string, url: string, body?: unknown, opts?: Reque
     if (!isJson) {
       return { ok: true, data: null as T, status: response.status };
     }
-    const data = (await response.json()) as T;
-    return { ok: true, data, status: response.status };
+    const raw = (await response.json()) as unknown;
+    try {
+      const data = parseEntityJson(url, raw) as T;
+      return { ok: true, data, status: response.status };
+    } catch (err) {
+      return {
+        ok: false,
+        code: 'validation_error',
+        status: response.status,
+        message: err instanceof Error ? err.message : 'Response failed schema validation',
+      };
+    }
   }
 
   // Error path
   const message = await readErrorMessage(response);
   const code = mapStatusToCode(response.status);
   return { ok: false, code, status: response.status, message };
+}
+
+/**
+ * Dispatch JSON through the appropriate zod entity schema based on URL path.
+ * Single objects and arrays are both supported. Unknown paths pass through
+ * untouched so this layer stays decoupled from endpoints it doesn't own.
+ */
+function parseEntityJson(url: string, data: unknown): unknown {
+  let pathname: string;
+  try {
+    pathname = new URL(url, 'https://x').pathname;
+  } catch {
+    return data;
+  }
+  const head = pathname.split('/').filter(Boolean)[0] ?? '';
+
+  const pick = (item: unknown) => {
+    switch (head) {
+      case 'transactions':
+        return TransactionSchema.parse(item);
+      case 'accounts':
+        return AccountSchema.parse(item);
+      case 'categories':
+        return CategorySchema.parse(item);
+      case 'users':
+        return UserSchema.parse(item);
+      default:
+        return item;
+    }
+  };
+
+  if (Array.isArray(data)) {
+    return data.map((item) => pick(item));
+  }
+  return pick(data);
 }
 
 async function readErrorMessage(response: Response): Promise<string> {

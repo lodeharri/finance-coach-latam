@@ -24,7 +24,7 @@ describe('HexStamp', () => {
     expect(styleAttr).toMatch(/var\(--ink-cobalto\)|#1f3fb8/i);
   });
 
-  it('is aria-hidden (decorative)', () => {
+  it('is aria-hidden (decorative) by default', () => {
     const { container } = render(<HexStamp />);
     const svg = container.querySelector('svg');
     expect(svg).toHaveAttribute('aria-hidden', 'true');
@@ -34,5 +34,28 @@ describe('HexStamp', () => {
     const { container } = render(<HexStamp />);
     const polygons = container.querySelectorAll('polygon');
     expect(polygons.length).toBeGreaterThanOrEqual(6);
+  });
+
+  it('defaults to the sm size (16 px)', () => {
+    const { container } = render(<HexStamp />);
+    const svg = container.querySelector('svg');
+    expect(svg).toHaveAttribute('width', '16');
+    expect(svg).toHaveAttribute('height', '16');
+  });
+
+  it('supports md (24 px) and lg (40 px) sizes for editorial layouts', () => {
+    const { container: mid } = render(<HexStamp size="md" />);
+    const { container: large } = render(<HexStamp size="lg" />);
+    expect(mid.querySelector('svg')).toHaveAttribute('width', '24');
+    expect(large.querySelector('svg')).toHaveAttribute('width', '40');
+  });
+
+  it('when given a title, exposes the title element for assistive tech', () => {
+    const { container } = render(<HexStamp title="Litografía del Sur" />);
+    const svg = container.querySelector('svg');
+    const titleEl = svg?.querySelector('title');
+    expect(titleEl).not.toBeNull();
+    expect(titleEl?.textContent).toBe('Litografía del Sur');
+    expect(svg).toHaveAttribute('role', 'img');
   });
 });

@@ -308,10 +308,11 @@ describe('TransactionForm', () => {
     expect(posts).toBe(0);
   });
 
-  it('submitting with accountId empty is blocked by HTML5 required on the select (no POST fires)', async () => {
-    // The <select> has `required` so jsdom gates the submit event. The
-    // form's onSubmit handler never runs, so the impl's custom accountId
-    // validation is unreachable through the normal UI flow. Pin that contract.
+  it('submitting with accountId empty is caught by JS validation (no POST fires)', async () => {
+    // The form has noValidate so HTML5 constraint validation does NOT gate
+    // the submit event. The molecule's own JS validation catches the empty
+    // accountId before the mutation runs. This test pins that contract: no
+    // POST is sent, the custom error renders verbatim.
     let posts = 0;
     server.use(
       accountsHandler([{ id: 'acc-1', name: 'Checking' }]),
@@ -331,7 +332,7 @@ describe('TransactionForm', () => {
 
     await new Promise((r) => setTimeout(r, 30));
     expect(posts).toBe(0);
-    expect(screen.queryByText(/account is required/i)).not.toBeInTheDocument();
+    expect(await screen.findByText(/account is required/i)).toBeInTheDocument();
   });
 
   it('submitting with valid values POSTs the full body shape (amountCents integer, ISO occurredAt)', async () => {

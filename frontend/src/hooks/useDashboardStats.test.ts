@@ -53,7 +53,7 @@ describe('computeDashboardStats', () => {
     expect(stats.mtdSpendCents).toBe(150000);
   });
 
-  it('excludes PENDING and FAILED transactions from the spend total', () => {
+  it('includes CATEGORIZED + PENDING in mtdSpendCents; excludes FAILED (REL-004)', () => {
     const stats = computeDashboardStats(
       [
         tx({ id: 'a', amountCents: 100000, status: 'CATEGORIZED' }),
@@ -63,9 +63,51 @@ describe('computeDashboardStats', () => {
       categories,
       NOW,
     );
-    expect(stats.mtdSpendCents).toBe(100000);
+    expect(stats.mtdSpendCents).toBe(150000);
     expect(stats.pendingCount).toBe(1);
     expect(stats.failedCount).toBe(1);
+  });
+
+  it('includes PENDING transactions in mtdSpendCents (the user already spent it)', () => {
+    const stats = computeDashboardStats(
+      [
+        tx({ id: 'a', amountCents: 100000, status: 'CATEGORIZED' }),
+        tx({ id: 'b', amountCents: 50000, status: 'PENDING' }),
+      ],
+      categories,
+      NOW,
+    );
+    expect(stats.mtdSpendCents).toBe(150000);
+    expect(stats.pendingCount).toBe(1);
+  });
+
+  it('excludes FAILED transactions from mtdSpendCents', () => {
+    const stats = computeDashboardStats(
+      [
+        tx({ id: 'a', amountCents: 100000, status: 'CATEGORIZED' }),
+        tx({ id: 'b', amountCents: 75000, status: 'FAILED' }),
+      ],
+      categories,
+      NOW,
+    );
+    expect(stats.mtdSpendCents).toBe(100000);
+    expect(stats.failedCount).toBe(1);
+  });
+
+  it('counts PENDING spend toward topCategories when categoryId is set', () => {
+    const stats = computeDashboardStats(
+      [
+        tx({ id: 'a', amountCents: 100000, status: 'CATEGORIZED', categoryId: 'c1' }),
+        tx({ id: 'b', amountCents: 80000, status: 'PENDING', categoryId: 'c2' }),
+      ],
+      categories,
+      NOW,
+    );
+    const top = stats.topCategories;
+    expect(top).toHaveLength(2);
+    const byId = Object.fromEntries(top.map((c) => [c.categoryId, c.totalCents]));
+    expect(byId['c1']).toBe(100000);
+    expect(byId['c2']).toBe(80000);
   });
 
   it('produces top-3 categories sorted by total spend', () => {
