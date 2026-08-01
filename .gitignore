@@ -12,6 +12,7 @@ pnpm-debug.log*
 **/build/
 **/out/
 **/.tsbuildinfo
+**/*.tsbuildinfo
 
 ### CDK ###
 cdk.out/
@@ -61,3 +62,4 @@ tmp/
 
 ### Tooling internals (local-only) ###
 .atl/review-snapshots/
+openspec/.sdd-init.json
