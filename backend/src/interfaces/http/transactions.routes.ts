@@ -13,6 +13,16 @@ import {
   type HttpRouteHandler,
 } from './http.utils';
 
+/**
+ * Upper bound on the `limit` query parameter accepted by GET /transactions.
+ *
+ * Bumped from 100 to 200 so InsightsPage's 12-month trend can fetch enough
+ * transactions to render a meaningful yearly series without hitting a 400.
+ * 200 still bounds the response payload for free-tier cost discipline and
+ * protects the Lambda + Neon connection pool from accidental unbounded reads.
+ */
+const MAX_LIST_LIMIT = 200;
+
 export interface TransactionsRoutesDeps {
   readonly createTransactionUseCase: CreateTransactionUseCase;
   readonly categorizeTransactionUseCase: CategorizeTransactionUseCase;
@@ -66,8 +76,8 @@ export function createTransactionsRoutes(
         const userId = targetUserId(actor, event.queryStringParameters?.userId);
         const rawLimit = event.queryStringParameters?.limit;
         const limit = rawLimit === undefined ? undefined : Number(rawLimit);
-        if (limit !== undefined && (!Number.isInteger(limit) || limit < 1 || limit > 100)) {
-          throw new HttpError(400, 'limit must be an integer between 1 and 100');
+        if (limit !== undefined && (!Number.isInteger(limit) || limit < 1 || limit > MAX_LIST_LIMIT)) {
+          throw new HttpError(400, `limit must be an integer between 1 and ${MAX_LIST_LIMIT}`);
         }
         const transactions = await deps.listTransactionsByUserUseCase.execute({
           actor,
