@@ -345,7 +345,7 @@ export function InsightsPage({ apiBaseUrl }: InsightsPageProps) {
                       </span>
                     </td>
                     <td className="py-2 pr-4 text-right">
-                      <AmountText amountCents={row.totalCents} currency="ARS" />
+                      <AmountText amountCents={row.totalCents} currency="COP" />
                     </td>
                     <td className="py-2 pr-4 text-right font-mono text-sm text-ink-tinta-mute">
                       —
@@ -381,7 +381,7 @@ export function InsightsPage({ apiBaseUrl }: InsightsPageProps) {
                   </span>
                   <span className="col-span-4 font-display text-md text-ink-tinta">{m.merchant}</span>
                   <span className="col-span-3 text-right">
-                    <AmountText amountCents={m.totalCents} currency="ARS" />
+                    <AmountText amountCents={m.totalCents} currency="COP" />
                   </span>
                   <span className="col-span-1 text-right font-mono text-sm text-ink-tinta-mute">
                     {m.count}

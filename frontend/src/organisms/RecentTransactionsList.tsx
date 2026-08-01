@@ -68,7 +68,7 @@ export function RecentTransactionsList({ apiBaseUrl, userId }: RecentTransaction
                 <span className="font-body text-md text-ink-tinta">{tx.merchant}</span>
                 <Badge variant={variant}>{tx.status}</Badge>
               </button>
-              <AmountText amountCents={tx.amountCents} currency="ARS" />
+              <AmountText amountCents={tx.amountCents} currency="COP" />
             </li>
           );
         })}

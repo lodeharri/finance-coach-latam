@@ -151,7 +151,7 @@ export function TransactionTable({
               <td className="py-2 pr-4 text-right">
                 <AmountText
                   amountCents={row.amountCents}
-                  currency="ARS"
+                  currency="COP"
                   signal={row.amountCents >= 0 ? undefined : 'negativo'}
                 />
               </td>

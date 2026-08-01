@@ -15,7 +15,7 @@ export type AmountSignal = 'positivo' | 'negativo' | undefined;
 export interface AmountTextProps {
   amountCents: number | undefined | null;
   currency?: string;
-  /** Use 'es-AR' by default — primary LATAM audience. */
+  /** Use 'es-CO' by default — primary LATAM audience. */
   locale?: string;
   signal?: AmountSignal;
 }
@@ -42,7 +42,7 @@ function asValidCents(value: number | undefined | null): number {
 export function AmountText({
   amountCents,
   currency,
-  locale = 'es-AR',
+  locale = 'es-CO',
   signal,
 }: AmountTextProps) {
   if (isMissingAmount(amountCents)) {

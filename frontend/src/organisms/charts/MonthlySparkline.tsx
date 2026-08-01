@@ -76,7 +76,7 @@ export function MonthlySparkline({ data, width, height = 280 }: MonthlySparkline
             />
             <YAxis hide />
             <Tooltip
-              formatter={(value) => Number(value ?? 0).toLocaleString('es-AR')}
+              formatter={(value) => Number(value ?? 0).toLocaleString('es-CO')}
               labelStyle={{ fontFamily: 'JetBrains Mono, monospace' }}
             />
             <Line

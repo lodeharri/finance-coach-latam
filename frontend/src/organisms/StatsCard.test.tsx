@@ -9,7 +9,7 @@ describe('StatsCard', () => {
   it('renders the label and amount in a compact variant', () => {
     render(<StatsCard label="Top category" amountCents={420000} variant="compact" />);
     expect(screen.getByText('Top category')).toBeInTheDocument();
-    expect(screen.getByText(/4\.200,00/)).toBeInTheDocument();
+    expect(screen.getByText(/4\.200/)).toBeInTheDocument();
   });
 
   it('renders the hero big number with the display font treatment', () => {

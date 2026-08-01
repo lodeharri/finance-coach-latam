@@ -12,7 +12,7 @@ import { AmountText } from './AmountText';
 describe('AmountText', () => {
   it('renders a formatted amount string (default locale)', () => {
     const { container } = render(<AmountText amountCents={1234} />);
-    // 1234 cents = 12.34 in es-AR (comma decimal). We accept either comma or dot
+    // 1234 cents = 12.34 in es-CO (comma decimal). We accept either comma or dot
     // because the runtime locale may default to en-US in jsdom.
     expect(container.textContent).toMatch(/12[.,]34/);
   });
@@ -82,7 +82,7 @@ describe('AmountText', () => {
   });
 
   it('still renders formatted currency when amountCents is 0 (zero is valid)', () => {
-    const { container } = render(<AmountText amountCents={0} currency="ARS" />);
+    const { container } = render(<AmountText amountCents={0} currency="COP" />);
     const span = container.querySelector('span')!;
     expect(span.textContent).not.toBe('—');
     // Currency-formatted zero is still "0,00" / "0.00" — but never the em-dash

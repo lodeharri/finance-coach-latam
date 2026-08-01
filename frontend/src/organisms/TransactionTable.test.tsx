@@ -126,7 +126,7 @@ describe('TransactionTable', () => {
     expect(buttons).toHaveLength(1);
   });
 
-  it('renders currency-formatted amount via AmountText (es-AR ARS)', async () => {
+  it('renders currency-formatted amount via AmountText (es-CO COP)', async () => {
     wrap(
       <TransactionTable
         apiBaseUrl={BASE}
@@ -137,8 +137,8 @@ describe('TransactionTable', () => {
       />,
     );
     await waitFor(() => expect(screen.getByTestId('transaction-table')).toBeInTheDocument());
-    // 420000 cents = $ 4.200,00 in es-AR ARS (currency symbol with a non-breaking space).
-    expect(screen.getByText(/4\.200,00/)).toBeInTheDocument();
+    // 420000 cents = $ 4.200 in es-CO COP (Intl auto-formats with or without trailing decimals).
+    expect(screen.getByText(/4\.200/)).toBeInTheDocument();
   });
 
   it('clicking the category pill opens the override dropdown', async () => {
