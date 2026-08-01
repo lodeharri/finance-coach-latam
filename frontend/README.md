@@ -2,6 +2,7 @@
 
 The frontend SPA for [Finance Coach LATAM](../README.md). React 18 + Vite + TypeScript strict + Tailwind 3 + Atomic Design, deployed on Cloudflare Pages (free tier), consuming the AWS-backed HTTP API v2 with direct `Authorization: Bearer <IdToken>` over the existing Cognito authorizer. Backend contract (categories, transactions, accounts, users, JWT shape) is unchanged — the SPA is a pure consumer of the `authorization`, `admin-categories`, and `transaction-categorization` specs.
 
+> Dev server proxies `/api/*` to `http://localhost:3000` (the local backend) so `npm run dev` works without going through the production CORS allow-list. See `vite.config.ts` `server.proxy`.
 ## Stack
 
 - **Build / runtime**: Vite 5, React 18, TypeScript strict (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`).

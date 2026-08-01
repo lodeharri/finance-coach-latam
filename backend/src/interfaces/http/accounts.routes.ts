@@ -26,7 +26,7 @@ export function createAccountsRoutes(deps: AccountsRoutesDeps): HttpRouteHandler
       if (method === 'GET') {
         const userId = targetUserId(actor, event.queryStringParameters?.userId);
         const accounts = await deps.listAccountsByUserUseCase.execute({ actor, userId });
-        return jsonResponse(200, accounts);
+        return jsonResponse(200, accounts, event);
       }
 
       if (method === 'POST') {
@@ -42,12 +42,12 @@ export function createAccountsRoutes(deps: AccountsRoutesDeps): HttpRouteHandler
           name: requiredString(body, 'name'),
           type: type as AccountType,
         });
-        return jsonResponse(201, account);
+        return jsonResponse(201, account, event);
       }
 
       throw new HttpError(405, `Method ${method} is not allowed on /accounts`);
     } catch (error) {
-      return routeError(error);
+      return routeError(error, event);
     }
   };
 }

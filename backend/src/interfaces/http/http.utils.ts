@@ -4,6 +4,7 @@ import type {
   APIGatewayProxyStructuredResultV2,
 } from 'aws-lambda';
 import type { VerifiedToken } from '../../domain/ports/auth.port';
+import { getConfig } from '../../infrastructure/config/env.config';
 
 // API Gateway's HttpJwtAuthorizer validates the JWT before invoking Lambda
 // and forwards the claims via `event.requestContext.authorizer.jwt.claims`.
@@ -24,20 +25,67 @@ export class HttpError extends Error {
   }
 }
 
-const CORS_HEADERS = {
-  'Content-Type': 'application/json',
-  'Access-Control-Allow-Origin': '*',
+const STATIC_CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type,Authorization',
 } as const;
 
+/**
+ * API Gateway HTTP API v2 lower-cases all incoming header names, but we still
+ * tolerate the canonical case for direct invocation (e.g. unit tests).
+ */
+function readOrigin(
+  headers: APIGatewayProxyEventV2['headers'] | null | undefined,
+): string | undefined {
+  if (!headers) return undefined;
+  const direct = headers['origin'] ?? headers['Origin'];
+  if (typeof direct === 'string' && direct.length > 0) return direct;
+  return undefined;
+}
+
+/**
+ * Build the CORS response headers for a given inbound request.
+ *
+ * If the request `Origin` is on the allow-list we echo it back
+ * (with `Vary: Origin` so caches do not cross-leak responses between
+ * origins). If it is not on the allow-list we OMIT `Access-Control-Allow-Origin`
+ * entirely — the browser will refuse the response, which is the correct
+ * behaviour for an unknown origin. We never default to `*` because
+ * `Access-Control-Allow-Origin: *` together with `Authorization` is a
+ * security anti-pattern that lets any site call the API with a stolen token.
+ */
+export function corsHeadersFor(
+  headers: APIGatewayProxyEventV2['headers'] | null | undefined,
+): Record<string, string> {
+  const base: Record<string, string> = {
+    ...STATIC_CORS_HEADERS,
+    Vary: 'Origin',
+  };
+  const origin = readOrigin(headers);
+  if (!origin) return base;
+  const { allowedOrigins } = getConfig().cors;
+  if (allowedOrigins.includes(origin)) {
+    base['Access-Control-Allow-Origin'] = origin;
+  }
+  return base;
+}
+
+/**
+ * Internal-only helper for callers that do not have an event handy (e.g. the
+ * 404 / 500 fall-through in `routeError`). Mirrors the OPTIONS path: only
+ * echoes a known origin, never falls back to `*`.
+ */
 export function jsonResponse(
   statusCode: number,
   body: unknown,
+  event?: APIGatewayProxyEventV2,
 ): APIGatewayProxyStructuredResultV2 {
   return {
     statusCode,
-    headers: { ...CORS_HEADERS },
+    headers: {
+      'Content-Type': 'application/json',
+      ...corsHeadersFor(event?.headers),
+    },
     body: JSON.stringify(body),
   };
 }
@@ -220,17 +268,20 @@ export function targetUserId(
   return candidate;
 }
 
-export function routeError(error: unknown): APIGatewayProxyStructuredResultV2 {
+export function routeError(
+  error: unknown,
+  event: AuthenticatedEvent,
+): APIGatewayProxyStructuredResultV2 {
   if (error instanceof HttpError) {
-    return jsonResponse(error.statusCode, { error: error.message });
+    return jsonResponse(error.statusCode, { error: error.message }, event);
   }
   const message = error instanceof Error ? error.message : String(error);
   if (message.startsWith('Forbidden:')) {
-    return jsonResponse(403, { error: message });
+    return jsonResponse(403, { error: message }, event);
   }
   if (message.toLowerCase().includes('not found')) {
-    return jsonResponse(404, { error: message });
+    return jsonResponse(404, { error: message }, event);
   }
   console.error('Authenticated route failed:', message);
-  return jsonResponse(500, { error: 'Internal server error' });
+  return jsonResponse(500, { error: 'Internal server error' }, event);
 }

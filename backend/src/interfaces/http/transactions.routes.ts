@@ -37,7 +37,7 @@ export function createTransactionsRoutes(
           transactionId: decodeURIComponent(categorizeMatch[1]!),
           userId,
         });
-        return jsonResponse(200, transaction);
+        return jsonResponse(200, transaction, event);
       }
 
       if (event.rawPath !== '/transactions') {
@@ -56,7 +56,7 @@ export function createTransactionsRoutes(
           userId,
           limit,
         });
-        return jsonResponse(200, transactions);
+        return jsonResponse(200, transactions, event);
       }
 
       if (method === 'POST') {
@@ -83,12 +83,12 @@ export function createTransactionsRoutes(
           occurredAt,
           notes,
         });
-        return jsonResponse(201, transaction);
+        return jsonResponse(201, transaction, event);
       }
 
       throw new HttpError(405, `Method ${method} is not allowed on /transactions`);
     } catch (error) {
-      return routeError(error);
+      return routeError(error, event);
     }
   };
 }

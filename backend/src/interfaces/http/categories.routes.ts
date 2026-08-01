@@ -30,7 +30,7 @@ export function createCategoriesRoutes(deps: CategoriesRoutesDeps): HttpRouteHan
       const pathId = idMatch ? event.rawPath.split('/').pop()! : '';
 
       if (method === 'GET' && event.rawPath === '/categories') {
-        return jsonResponse(200, await deps.listCategoriesUseCase.execute());
+        return jsonResponse(200, await deps.listCategoriesUseCase.execute(), event);
       }
 
       if (method === 'POST' && event.rawPath === '/categories') {
@@ -51,7 +51,7 @@ export function createCategoriesRoutes(deps: CategoriesRoutesDeps): HttpRouteHan
             name,
             color,
           });
-          return jsonResponse(201, created);
+          return jsonResponse(201, created, event);
         } catch (error) {
           // REQ-AC-002: the use case throws a plain Error with the
           // 'Category slug already exists: <slug>' prefix; re-throw as
@@ -60,7 +60,7 @@ export function createCategoriesRoutes(deps: CategoriesRoutesDeps): HttpRouteHan
             error instanceof Error &&
             error.message.startsWith('Category slug already exists')
           ) {
-            return routeError(new HttpError(409, error.message));
+            return routeError(new HttpError(409, error.message), event);
           }
           throw error;
         }
@@ -105,7 +105,7 @@ export function createCategoriesRoutes(deps: CategoriesRoutesDeps): HttpRouteHan
           id: pathId,
           patch: { name, color },
         });
-        return jsonResponse(200, updated);
+        return jsonResponse(200, updated, event);
       }
 
       if (method === 'DELETE' && idMatch) {
@@ -120,16 +120,16 @@ export function createCategoriesRoutes(deps: CategoriesRoutesDeps): HttpRouteHan
             error instanceof Error &&
             error.message.startsWith('Category in use by transactions')
           ) {
-            return routeError(new HttpError(409, error.message));
+            return routeError(new HttpError(409, error.message), event);
           }
           throw error;
         }
-        return jsonResponse(204, {});
+        return jsonResponse(204, {}, event);
       }
 
       throw new HttpError(405, `Method ${method} is not allowed on ${event.rawPath}`);
     } catch (error) {
-      return routeError(error);
+      return routeError(error, event);
     }
   };
 }

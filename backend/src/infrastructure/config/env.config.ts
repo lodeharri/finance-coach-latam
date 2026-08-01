@@ -10,6 +10,7 @@ interface AppEnv {
   readonly NODE_ENV?: string;
   readonly LOG_LEVEL?: string;
   readonly CATEGORIZER_QUEUE_URL?: string;
+  readonly ALLOWED_ORIGINS?: string;
 }
 
 function readEnv(): AppEnv {
@@ -25,6 +26,7 @@ function readEnv(): AppEnv {
     NODE_ENV: process.env.NODE_ENV,
     LOG_LEVEL: process.env.LOG_LEVEL,
     CATEGORIZER_QUEUE_URL: process.env.CATEGORIZER_QUEUE_URL,
+    ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
   };
 }
 
@@ -40,6 +42,10 @@ export interface CognitoConfig {
   readonly userPoolClientId: string;
 }
 
+export interface CorsConfig {
+  readonly allowedOrigins: readonly string[];
+}
+
 export interface Config {
   readonly databaseUrl: string;
   readonly llm: LLMProviderConfig;
@@ -47,6 +53,7 @@ export interface Config {
   readonly awsRegion: string;
   readonly nodeEnv: 'development' | 'production' | 'test';
   readonly logLevel: 'debug' | 'info' | 'warn' | 'error';
+  readonly cors: CorsConfig;
 }
 
 function optionalSecret(value: string | undefined): string | undefined {
@@ -73,6 +80,52 @@ function readLLMConfig(env: AppEnv): LLMProviderConfig {
   }
 
   return Object.freeze({ provider, geminiApiKey, openaiApiKey });
+}
+
+export const DEFAULT_ALLOWED_ORIGINS: readonly string[] = Object.freeze([
+  'https://finance-coach-latam.pages.dev',
+  'http://localhost:5173',
+]);
+
+/**
+ * Parse a CSV of origin URLs into a de-duplicated, frozen list.
+ *
+ * Rules:
+ *   - Trims whitespace around each entry.
+ *   - Rejects empty entries (e.g. trailing commas).
+ *   - Rejects origins without an `http://` / `https://` scheme.
+ *   - De-duplicates while preserving the first-seen order.
+ *
+ * Throws a descriptive `Error` when the input is malformed so a deploy with
+ * a typo fails fast rather than silently falling back to a default.
+ */
+export function parseAllowedOrigins(csv: string | undefined): readonly string[] {
+  const raw = csv?.trim() ?? '';
+  if (!raw) {
+    return DEFAULT_ALLOWED_ORIGINS;
+  }
+
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const entry of raw.split(',')) {
+    const trimmed = entry.trim();
+    if (!trimmed) {
+      throw new Error('ALLOWED_ORIGINS contains an empty entry (check trailing commas).');
+    }
+    if (!/^https?:\/\//.test(trimmed)) {
+      throw new Error(
+        `ALLOWED_ORIGINS entry "${trimmed}" is not an absolute URL with an http(s) scheme.`,
+      );
+    }
+    if (!seen.has(trimmed)) {
+      seen.add(trimmed);
+      out.push(trimmed);
+    }
+  }
+  if (out.length === 0) {
+    return DEFAULT_ALLOWED_ORIGINS;
+  }
+  return Object.freeze(out);
 }
 
 let cached: Config | undefined;
@@ -104,6 +157,9 @@ export function getConfig(): Config {
     awsRegion,
     nodeEnv,
     logLevel,
+    cors: Object.freeze({
+      allowedOrigins: parseAllowedOrigins(env.ALLOWED_ORIGINS),
+    }),
   });
   return cached;
 }
