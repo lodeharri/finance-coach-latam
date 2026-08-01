@@ -17,6 +17,7 @@ function makeEvent(
   method: 'GET' | 'POST' | 'PATCH' | 'DELETE' = 'POST',
   claims: Partial<AuthorizerClaims> = {},
   path = '/transactions',
+  queryStringParameters: Record<string, string> | undefined = undefined,
 ): APIGatewayProxyEventV2WithJWTAuthorizer {
   return {
     version: '2.0',
@@ -52,6 +53,7 @@ function makeEvent(
     },
     body: body === null ? undefined : typeof body === 'string' ? body : JSON.stringify(body),
     isBase64Encoded: false,
+    queryStringParameters,
   };
 }
 
@@ -291,6 +293,93 @@ describe('PATCH /transactions/{id} route handler', () => {
     expect(result.statusCode).toBe(403);
     expect(bodyOf(result)).toEqual({
       error: 'Forbidden: users can only act on their own resources',
+    });
+  });
+});
+
+describe('GET /transactions list limit validation', () => {
+  let listTransactionsByUserUseCase: ListTransactionsByUserUseCase;
+  let handler: ReturnType<typeof createTransactionsRoutes>;
+
+  beforeEach(() => {
+    listTransactionsByUserUseCase = {
+      execute: vi.fn().mockResolvedValue([]),
+    } as unknown as ListTransactionsByUserUseCase;
+    handler = createTransactionsRoutes({
+      createTransactionUseCase: { execute: vi.fn() } as unknown as CreateTransactionUseCase,
+      categorizeTransactionUseCase: { execute: vi.fn() } as unknown as CategorizeTransactionUseCase,
+      listTransactionsByUserUseCase,
+      updateTransactionCategoryUseCase: { execute: vi.fn() } as unknown as UpdateTransactionCategoryUseCase,
+    });
+  });
+
+  it('accepts limit=50 (default-ish)', async () => {
+    const result = await handler(
+      makeEvent(null, 'GET', ownerClaims, '/transactions', { limit: '50', userId: 'user-1' }),
+    );
+    expect(result.statusCode).toBe(200);
+    expect(listTransactionsByUserUseCase.execute).toHaveBeenCalledWith({
+      actor: ownerActor,
+      userId: 'user-1',
+      limit: 50,
+    });
+  });
+
+  it('accepts limit=100 (legacy boundary, still supported)', async () => {
+    const result = await handler(
+      makeEvent(null, 'GET', ownerClaims, '/transactions', { limit: '100', userId: 'user-1' }),
+    );
+    expect(result.statusCode).toBe(200);
+  });
+
+  // Regression for the InsightsPage 400 bug: InsightsPage.tsx asks for
+  // limit=200 to render a 12-month trend. The backend used to cap at 100,
+  // which returned 400 and broke the Insights view entirely.
+  it('accepts limit=200 (InsightsPage 12-month trend — bug fix)', async () => {
+    const result = await handler(
+      makeEvent(null, 'GET', ownerClaims, '/transactions', { limit: '200', userId: 'user-1' }),
+    );
+    expect(result.statusCode).toBe(200);
+    expect(listTransactionsByUserUseCase.execute).toHaveBeenCalledWith({
+      actor: ownerActor,
+      userId: 'user-1',
+      limit: 200,
+    });
+  });
+
+  it('rejects limit=201 (just above MAX_LIST_LIMIT)', async () => {
+    const result = await handler(
+      makeEvent(null, 'GET', ownerClaims, '/transactions', { limit: '201', userId: 'user-1' }),
+    );
+    expect(result.statusCode).toBe(400);
+    expect(bodyOf(result)).toEqual({
+      error: 'limit must be an integer between 1 and 200',
+    });
+  });
+
+  it('rejects limit=0 (below minimum)', async () => {
+    const result = await handler(
+      makeEvent(null, 'GET', ownerClaims, '/transactions', { limit: '0', userId: 'user-1' }),
+    );
+    expect(result.statusCode).toBe(400);
+  });
+
+  it('rejects non-integer limit', async () => {
+    const result = await handler(
+      makeEvent(null, 'GET', ownerClaims, '/transactions', { limit: 'abc', userId: 'user-1' }),
+    );
+    expect(result.statusCode).toBe(400);
+  });
+
+  it('omitting limit passes through as undefined (use case default)', async () => {
+    const result = await handler(
+      makeEvent(null, 'GET', ownerClaims, '/transactions', { userId: 'user-1' }),
+    );
+    expect(result.statusCode).toBe(200);
+    expect(listTransactionsByUserUseCase.execute).toHaveBeenCalledWith({
+      actor: ownerActor,
+      userId: 'user-1',
+      limit: undefined,
     });
   });
 });
