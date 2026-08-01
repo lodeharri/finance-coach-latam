@@ -1,9 +1,12 @@
 /**
  * SpendDonut chart — Litografía del Sur.
  *
- * Recharts PieChart with category hex colors. Slices < 1% of the total
- * aggregate into an "Otros" slice with a tooltip explanation. Renders inside
- * ResponsiveContainer.
+ * Editorial treatment:
+ * - Asterism caption `* * *  POR CATEGORÍA  * * *` in mono caps as the
+ *   chart caption (signature: print-style caption, not a chart title).
+ * - Recharts PieChart with category hex colors. Slices < 1% of the total
+ *   aggregate into an "Otros" slice with a tooltip explanation.
+ * - Renders inside ResponsiveContainer.
  */
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import type { Category } from '@/services/types';
@@ -52,28 +55,37 @@ function aggregateSmallSlices(data: ReadonlyArray<SpendDonutDatum>): SpendDonutD
 export function SpendDonut({ data, width = 320, height = 240 }: SpendDonutProps) {
   const aggregated = aggregateSmallSlices(data);
   return (
-    <div data-testid="spend-donut" style={{ width, height }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
-          <Pie
-            data={[...aggregated]}
-            dataKey="totalCents"
-            nameKey="name"
-            innerRadius={60}
-            outerRadius={100}
-            paddingAngle={1}
-          >
-            {aggregated.map((slice) => (
-              <Cell key={slice.categoryId} fill={slice.color} />
-            ))}
-          </Pie>
-          <Tooltip
-            formatter={(value) => Number(value ?? 0).toLocaleString('es-AR')}
-            separator=" — "
-          />
-        </PieChart>
-      </ResponsiveContainer>
-    </div>
+    <figure className="flex flex-col gap-3" data-testid="spend-donut-figure">
+      <figcaption
+        aria-hidden="true"
+        data-testid="spend-donut-caption"
+        className="text-center font-mono text-[10px] uppercase tracking-[0.3em] text-ink-tinta-mute"
+      >
+        * * *&nbsp;&nbsp;POR CATEGORÍA&nbsp;&nbsp;* * *
+      </figcaption>
+      <div data-testid="spend-donut" style={{ width, height }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={[...aggregated]}
+              dataKey="totalCents"
+              nameKey="name"
+              innerRadius={60}
+              outerRadius={100}
+              paddingAngle={1}
+            >
+              {aggregated.map((slice) => (
+                <Cell key={slice.categoryId} fill={slice.color} />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(value) => Number(value ?? 0).toLocaleString('es-AR')}
+              separator=" — "
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    </figure>
   );
 }
 

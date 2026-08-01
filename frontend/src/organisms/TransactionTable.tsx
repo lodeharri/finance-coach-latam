@@ -1,10 +1,12 @@
 /**
  * TransactionTable organism — Litografía del Sur.
  *
- * Signature element: ledger line numbers "N.º 0042" prefix on each row, in
- * JetBrains Mono xs. Currency-formatted amount via AmountText. PENDING|FAILED
- * status chip via Badge. CATEGORIZED pill click opens CategorySelect override
- * dropdown. Recategorize button on PENDING|FAILED.
+ * Editorial treatment:
+ * - Engraved 2 px tinta thead rule (signature, dense).
+ * - Ledger line numbers "N.º 0042" prefix on each row, in JetBrains Mono xs.
+ * - Currency-formatted amount via AmountText. PENDING|FAILED status chip via
+ *   Badge. CATEGORIZED pill click opens CategorySelect override dropdown.
+ *   Recategorize button on PENDING|FAILED.
  */
 import { useState } from 'react';
 import type { Transaction } from '@/services/types';
@@ -49,8 +51,14 @@ export function TransactionTable({
 
   if (total === 0) {
     return (
-      <div className="font-body text-sm text-ink-tinta-soft" data-testid="empty-state">
-        No transactions yet. Log your first one to see it here.
+      <div
+        className="rounded-sm border border-dashed border-ink-paper-press bg-ink-paper-lift p-6"
+        data-testid="empty-state"
+      >
+        <p className="font-display text-lg italic text-ink-tinta">Ningún movimiento aún.</p>
+        <p className="mt-1 font-body text-sm text-ink-tinta-soft">
+          Log your first transaction to see it here.
+        </p>
       </div>
     );
   }
@@ -59,26 +67,50 @@ export function TransactionTable({
     <table className="w-full border-collapse font-body text-md" data-testid="transaction-table">
       <thead>
         <tr className="border-b-2 border-ink-tinta text-left">
-          <th scope="col" className="py-2 pr-4 font-mono text-xs uppercase tracking-wide text-ink-tinta-mute">#</th>
-          <th scope="col" className="py-2 pr-4 font-mono text-xs uppercase tracking-wide text-ink-tinta-mute">Date</th>
-          <th scope="col" className="py-2 pr-4 font-mono text-xs uppercase tracking-wide text-ink-tinta-mute">Merchant</th>
-          <th scope="col" className="py-2 pr-4 font-mono text-xs uppercase tracking-wide text-ink-tinta-mute">Category</th>
-          <th scope="col" className="py-2 pr-4 text-right font-mono text-xs uppercase tracking-wide text-ink-tinta-mute">Amount</th>
-          <th scope="col" className="py-2 pr-4 font-mono text-xs uppercase tracking-wide text-ink-tinta-mute">Status</th>
-          <th scope="col" className="py-2 pr-4 font-mono text-xs uppercase tracking-wide text-ink-tinta-mute">Actions</th>
+          <th scope="col" className="py-2 pr-4 font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta">
+            N.º
+          </th>
+          <th scope="col" className="py-2 pr-4 font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta">
+            Date
+          </th>
+          <th scope="col" className="py-2 pr-4 font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta">
+            Merchant
+          </th>
+          <th scope="col" className="py-2 pr-4 font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta">
+            Category
+          </th>
+          <th scope="col" className="py-2 pr-4 text-right font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta">
+            Amount
+          </th>
+          <th scope="col" className="py-2 pr-4 font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta">
+            Status
+          </th>
+          <th scope="col" className="py-2 pr-4 font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta">
+            Actions
+          </th>
         </tr>
       </thead>
       <tbody>
         {rows.map((row, index) => {
           const cat = categories.find((c) => c.id === row.categoryId);
           const statusVariant =
-            row.status === 'CATEGORIZED' ? 'positivo' :
-            row.status === 'PENDING' ? 'alerta' :
-            'fallo';
+            row.status === 'CATEGORIZED'
+              ? 'positivo'
+              : row.status === 'PENDING'
+                ? 'alerta'
+                : 'fallo';
           return (
-            <tr key={row.id} className="border-b border-ink-paper-press" data-testid={`tx-row-${row.id}`}>
-              <td className="py-2 pr-4 font-mono text-xs text-ink-tinta-mute">{formatLedgerLine(index, total)}</td>
-              <td className="py-2 pr-4 font-mono text-xs text-ink-tinta-soft">{new Date(row.occurredAt).toISOString().slice(0, 10)}</td>
+            <tr
+              key={row.id}
+              className="border-b border-ink-hairline"
+              data-testid={`tx-row-${row.id}`}
+            >
+              <td className="py-2 pr-4 font-mono text-xs text-ink-tinta-mute">
+                {formatLedgerLine(index, total)}
+              </td>
+              <td className="py-2 pr-4 font-mono text-xs text-ink-tinta-soft">
+                {new Date(row.occurredAt).toISOString().slice(0, 10)}
+              </td>
               <td className="py-2 pr-4">{row.merchant}</td>
               <td className="py-2 pr-4">
                 {overrideFor === row.id ? (
@@ -95,7 +127,7 @@ export function TransactionTable({
                   <button
                     type="button"
                     onClick={() => setOverrideFor(row.id)}
-                    className="rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-cobalto"
+                    className="focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-cobalto"
                     aria-label={`Change category for ${row.merchant}`}
                   >
                     <CategoryPill slug={cat.slug} name={cat.name} color={cat.color} />

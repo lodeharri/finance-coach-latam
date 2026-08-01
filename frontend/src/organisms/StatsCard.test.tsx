@@ -17,8 +17,22 @@ describe('StatsCard', () => {
     const number = screen.getByTestId('stats-card-hero-number');
     expect(number).toBeInTheDocument();
     expect(number.className).toContain('font-display');
-    expect(number.className).toContain('text-[64px]');
+    expect(number.className).toContain('text-4xl');
     expect(number.className).toContain('font-bold');
+  });
+
+  it('renders the compact variant with the cobalt left strip signature', () => {
+    render(<StatsCard label="Pending" amountCents={0} />);
+    const card = screen.getByTestId('stats-card');
+    expect(card.className).toContain('border-l-4');
+    expect(card.className).toContain('border-ink-cobalto');
+  });
+
+  it('renders an ordinal kicker when the ordinal prop is provided', () => {
+    render(<StatsCard label="Top category" amountCents={420000} variant="compact" ordinal="N.º 02" />);
+    const ordinal = screen.getByTestId('stats-card-ordinal');
+    expect(ordinal.textContent).toBe('N.º 02');
+    expect(ordinal.className).toMatch(/font-mono/);
   });
 
   it('renders an accessible name from aria-label', () => {

@@ -1,9 +1,16 @@
 /**
  * DashboardPage — Litografía del Sur.
  *
- * The signature element: THE BIG NUMBER (Bricolage Grotesque 700 64px) in
- * the hero StatsCard for MTD spend. Skeletons replace spinners for the
- * chart + recent list during loading (REQ-FFC-DASH-LOADING). Charts are
+ * Editorial treatment:
+ * - Kicker `TABLERO · ENERO 2026` in mono caps above the page title.
+ * - Hero number at text-4xl (104 px) with cobalt 4 px left rule (signature).
+ * - Mono ordinals `N.º 02`, `N.º 03`, `N.º 04` on compact stats cards.
+ * - Asterism captions on the donut and sparkline charts (already in chart
+ *   organisms).
+ * - Section heads in mono caps tracking-2em.
+ *
+ * The big number stays the signature element. Skeletons replace spinners for
+ * the chart + recent list during loading (REQ-FFC-DASH-LOADING). Charts are
  * React.lazy so the chart code splits into its own chunk.
  */
 import { lazy, Suspense } from 'react';
@@ -37,9 +44,25 @@ function ChartSkeleton({ height = 240 }: { height?: number }) {
   );
 }
 
+function SectionHead({ kicker, children }: { kicker: string; children: React.ReactNode }) {
+  return (
+    <header className="mb-3 flex items-baseline justify-between">
+      <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-tinta-mute">
+        {kicker}
+      </span>
+      <h2 className="font-display text-lg font-bold text-ink-tinta">{children}</h2>
+    </header>
+  );
+}
+
 export interface DashboardPageProps {
   apiBaseUrl: string;
 }
+
+const MONTHS_ES = [
+  'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+  'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE',
+];
 
 export function DashboardPage({ apiBaseUrl }: DashboardPageProps) {
   const session = sessionStore.getState();
@@ -56,9 +79,7 @@ export function DashboardPage({ apiBaseUrl }: DashboardPageProps) {
   }));
 
   // For sparkline we synthesize the last 6 months of MTD spend from the
-  // loaded transactions. In a fuller iteration this would call a dedicated
-  // aggregate endpoint; the math here keeps the chart honest while the
-  // endpoint is not yet wired.
+  // loaded transactions.
   const months: Array<{ month: string; totalCents: number }> = (() => {
     const monthsLabels = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
     const now = new Date();
@@ -80,14 +101,21 @@ export function DashboardPage({ apiBaseUrl }: DashboardPageProps) {
 
   const top = stats.topCategories[0];
   const totalCategories = categories.data?.length ?? 0;
+  const now = new Date();
+  const kickerMonth = `${MONTHS_ES[now.getMonth()]} ${now.getFullYear()}`;
 
   return (
-    <section className="flex flex-col gap-6">
-      <header className="flex items-baseline justify-between">
-        <h1 className="font-display text-2xl font-bold text-ink-tinta">Tablero</h1>
-        <span className="font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta-mute">
-          {totalCategories} {totalCategories === 1 ? 'category' : 'categories'} configured
+    <section className="flex flex-col gap-8">
+      <header data-testid="dashboard-page-header" className="flex flex-col gap-2">
+        <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-tinta-mute">
+          TABLERO · {kickerMonth}
         </span>
+        <div className="flex items-baseline justify-between gap-4">
+          <h1 className="font-display text-2xl font-bold text-ink-tinta">Tu mes, en cifras</h1>
+          <span className="font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta-mute">
+            {totalCategories} {totalCategories === 1 ? 'category' : 'categories'} configured
+          </span>
+        </div>
       </header>
 
       <div className="grid grid-cols-12 gap-4">
@@ -95,6 +123,7 @@ export function DashboardPage({ apiBaseUrl }: DashboardPageProps) {
           label="MTD spend"
           amountCents={stats.mtdSpendCents}
           variant="hero"
+          ordinal="N.º 01 · HERO"
           ariaLabel={`Month to date spend: ${stats.mtdSpendCents} cents`}
           delta={
             stats.pendingCount + stats.failedCount > 0
@@ -109,12 +138,14 @@ export function DashboardPage({ apiBaseUrl }: DashboardPageProps) {
           label="Top category"
           amountCents={top?.totalCents ?? 0}
           variant="compact"
+          ordinal="N.º 02"
           ariaLabel={top ? `Top category: ${top.name}` : 'Top category'}
           delta={top ? { label: top.name, tone: 'neutral' } : undefined}
         />
         <StatsCard
           label="Pending"
           variant="compact"
+          ordinal="N.º 03"
           delta={{ label: `${stats.pendingCount} to categorize`, tone: 'alerta' }}
           ariaLabel={`${stats.pendingCount} pending`}
         >
@@ -123,25 +154,26 @@ export function DashboardPage({ apiBaseUrl }: DashboardPageProps) {
         <StatsCard
           label="Failed"
           variant="compact"
+          ordinal="N.º 04"
           delta={{ label: `${stats.failedCount} need attention`, tone: 'fallo' }}
           ariaLabel={`${stats.failedCount} failed`}
         >
           <span>{stats.failedCount}</span>
         </StatsCard>
         <div className="col-span-12 md:col-span-6">
-          <h2 className="font-display text-lg font-bold text-ink-tinta">Spend by category</h2>
+          <SectionHead kicker="* * *&nbsp;&nbsp;DISTRIBUCIÓN">Spend by category</SectionHead>
           <Suspense fallback={<ChartSkeleton />}>
             <SpendDonut data={donutData} />
           </Suspense>
         </div>
         <div className="col-span-12 md:col-span-6">
-          <h2 className="font-display text-lg font-bold text-ink-tinta">Last 6 months</h2>
+          <SectionHead kicker="* * *&nbsp;&nbsp;SERIE">Last 6 months</SectionHead>
           <Suspense fallback={<ChartSkeleton height={200} />}>
             <MonthlySparkline data={months} />
           </Suspense>
         </div>
         <div className="col-span-12">
-          <h2 className="font-display text-lg font-bold text-ink-tinta">Recent activity</h2>
+          <SectionHead kicker="* * *&nbsp;&nbsp;ACTIVIDAD">Recent activity</SectionHead>
           <RecentTransactionsList apiBaseUrl={apiBaseUrl} userId={userId} />
         </div>
       </div>
