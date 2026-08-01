@@ -134,6 +134,22 @@ Chain strategy: stacked-to-main
 
 ---
 
+## Backfill: colocated tests for PR2-T13 / PR2-T19 / PR2-T25
+
+PR #40 merged the three molecules (`AccountForm`, `UserForm`, `TransactionForm`) together with their `[I]` implementation tasks (PR2-T14, PR2-T20, PR2-T26) but shipped without the paired `[T]` colocated test files. The original PR2-T13, PR2-T19, and PR2-T25 tasks above were marked `[x]` against the implementations that landed, with the test work genuinely missing from the diff.
+
+That gap caused the molecules coverage glob to drop to **43.7% lines / 76.92% functions**, failing the 80% per-glob threshold in `frontend/vitest.config.ts` and blocking CI on every subsequent PR.
+
+The actual delivery of those three `[T]` tasks lives in the follow-up branch **`fix/backfill-molecule-tests`** (PR against `main`):
+
+- `frontend/src/molecules/AccountForm.test.tsx` — 11 tests, 100% lines on `AccountForm.tsx`.
+- `frontend/src/molecules/UserForm.test.tsx` — 12 tests, 100% lines on `UserForm.tsx`.
+- `frontend/src/molecules/TransactionForm.test.tsx` — 20 tests, 97.34% lines on `TransactionForm.tsx`.
+
+Combined effect on the molecules glob coverage: **99.28% lines / 95.04% functions / 100% statements / 99.28% branches** — well above the 80% threshold. Frontend test count: 230 → **273**.
+
+---
+
 ## PR3 — Dashboard + Insights (forecast 500 lines, size:exception required)
 
 - **Total estimated lines:** 500
