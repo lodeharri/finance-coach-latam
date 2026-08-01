@@ -6,6 +6,7 @@ export interface ListTransactionsByUserInput {
   readonly actor: Actor;
   readonly userId: string;
   readonly limit?: number;
+  readonly offset?: number;
 }
 
 export class ListTransactionsByUserUseCase {
@@ -21,6 +22,7 @@ export class ListTransactionsByUserUseCase {
       where: { userId: input.userId },
       orderBy: { field: 'occurredAt', direction: 'desc' },
       limit: input.limit ?? 50,
+      offset: input.offset,
     });
   }
 }
