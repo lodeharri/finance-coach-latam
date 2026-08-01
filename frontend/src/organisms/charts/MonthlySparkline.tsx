@@ -9,6 +9,7 @@
  */
 import { useEffect, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceDot } from 'recharts';
+import type { Transaction } from '@/services/types';
 
 export interface MonthlySparklinePoint {
   readonly month: string; // e.g. 'ENE 2026'
@@ -17,11 +18,12 @@ export interface MonthlySparklinePoint {
 
 export interface MonthlySparklineProps {
   data: ReadonlyArray<MonthlySparklinePoint>;
+  /** Optional fixed width. When omitted the chart fills the parent. */
   width?: number;
   height?: number;
 }
 
-export function MonthlySparkline({ data, width = 320, height = 200 }: MonthlySparklineProps) {
+export function MonthlySparkline({ data, width, height = 280 }: MonthlySparklineProps) {
   // ResponsiveContainer in jsdom does not size correctly; defer render until
   // the component is mounted in a real DOM with a measurable parent.
   const [mounted, setMounted] = useState(false);
@@ -32,7 +34,7 @@ export function MonthlySparkline({ data, width = 320, height = 200 }: MonthlySpa
       <div
         data-testid="sparkline-empty"
         className="font-body text-sm text-ink-tinta-soft"
-        style={{ width, height }}
+        style={width !== undefined ? { width, height } : { minHeight: height }}
       >
         Aún no hay suficiente historia.
       </div>
@@ -40,10 +42,19 @@ export function MonthlySparkline({ data, width = 320, height = 200 }: MonthlySpa
   }
 
   if (!mounted) {
-    return <div data-testid="sparkline-placeholder" style={{ width, height }} />;
+    return (
+      <div
+        data-testid="sparkline-placeholder"
+        style={width !== undefined ? { width, height } : { minHeight: height }}
+      />
+    );
   }
 
   const last = data[data.length - 1];
+  const containerStyle =
+    width !== undefined
+      ? { width, height }
+      : { width: '100%', height, minHeight: height };
 
   return (
     <figure className="flex flex-col gap-3">
@@ -54,13 +65,14 @@ export function MonthlySparkline({ data, width = 320, height = 200 }: MonthlySpa
       >
         * * *&nbsp;&nbsp;ÚLTIMOS {data.length} MESES&nbsp;&nbsp;* * *
       </figcaption>
-      <div data-testid="monthly-sparkline" style={{ width, height }}>
+      <div data-testid="monthly-sparkline" style={containerStyle}>
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={[...data]}>
+          <LineChart data={[...data]} margin={{ top: 8, right: 16, bottom: 8, left: 8 }}>
             <XAxis
               dataKey="month"
               tick={{ fill: '#4a4f5a', fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}
               stroke="#8a8678"
+              interval="preserveStartEnd"
             />
             <YAxis hide />
             <Tooltip
@@ -87,10 +99,36 @@ export function MonthlySparkline({ data, width = 320, height = 200 }: MonthlySpa
 
 // Pure helper for tests.
 // eslint-disable-next-line react-refresh/only-export-components
+export function buildTrendForPeriod(
+  transactions: ReadonlyArray<Transaction>,
+  count: number,
+  now: Date = new Date(),
+): MonthlySparklinePoint[] {
+  if (count < 1) return [];
+  const months = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+  const buckets: MonthlySparklinePoint[] = [];
+  for (let i = count - 1; i >= 0; i -= 1) {
+    const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+    let totalCents = 0;
+    for (const tx of transactions) {
+      if (tx.status === 'FAILED') continue;
+      const occurred = new Date(tx.occurredAt);
+      if (Number.isNaN(occurred.getTime())) continue;
+      if (occurred >= start && occurred < end) {
+        totalCents += tx.amountCents;
+      }
+    }
+    buckets.push({ month: `${months[start.getMonth()]} ${start.getFullYear()}`, totalCents });
+  }
+  return buckets;
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
 export function trailingMonths(now: Date, count: number): string[] {
   const months = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
   const out: string[] = [];
-  for (let i = count - 1; i >= 0; i--) {
+  for (let i = count - 1; i >= 0; i -= 1) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     out.push(`${months[d.getMonth()]} ${d.getFullYear()}`);
   }

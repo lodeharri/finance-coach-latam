@@ -144,4 +144,70 @@ describe('InsightsPage — totals parity with Dashboard (REL-001)', () => {
     const cell = screen.getByTestId('breakdown-row-c1').querySelector('[data-amount-cents]');
     expect(cell?.getAttribute('data-amount-cents')).toBe('150000');
   });
+
+  it('switching from this_month to last_12 expands the sparkline caption from 1 to 12 months', async () => {
+    const realNow = new Date();
+    const occ = new Date(realNow.getFullYear(), realNow.getMonth(), 5, 12, 0, 0).toISOString();
+    server.use(
+      http.get(`${BASE}/transactions`, () =>
+        HttpResponse.json([
+          tx({ id: 'a', amountCents: 100000, status: 'CATEGORIZED', occurredAt: occ }),
+        ]),
+      ),
+    );
+
+    wrap(<InsightsPage apiBaseUrl={BASE} />);
+
+    // Default period is last_6 — switch to this_month first to assert
+    // narrow window, then to last_12 to assert the wide window.
+    const thisMonth = await screen.findByTestId('period-this_month');
+    await act(async () => {
+      thisMonth.click();
+    });
+
+    // this_month renders only 1 bucket, so the chart stays in the empty
+    // state (data.length < 2). Verify the empty copy is shown.
+    await waitFor(() =>
+      expect(screen.getByTestId('sparkline-empty')).toBeInTheDocument(),
+    );
+
+    // Switch to last_12 → 12 buckets, the chart renders with the
+    // "ÚLTIMOS 12 MESES" caption.
+    const last12 = await screen.findByTestId('period-last_12');
+    await act(async () => {
+      last12.click();
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId('sparkline-caption').textContent).toMatch(/ÚLTIMOS 12 MESES/),
+    );
+  });
+
+  it('MonthlySparkline container has explicit minHeight (signature fill the parent)', async () => {
+    const realNow = new Date();
+    const occ = new Date(realNow.getFullYear(), realNow.getMonth(), 5, 12, 0, 0).toISOString();
+    server.use(
+      http.get(`${BASE}/transactions`, () =>
+        HttpResponse.json([
+          tx({ id: 'a', amountCents: 100000, status: 'CATEGORIZED', occurredAt: occ }),
+          tx({ id: 'b', amountCents: 50000, status: 'CATEGORIZED', occurredAt: occ, merchant: 'Shell' }),
+        ]),
+      ),
+    );
+
+    wrap(<InsightsPage apiBaseUrl={BASE} />);
+
+    const last12 = await screen.findByTestId('period-last_12');
+    await act(async () => {
+      last12.click();
+    });
+
+    await waitFor(() => expect(screen.getByTestId('monthly-sparkline')).toBeInTheDocument());
+    const chart = screen.getByTestId('monthly-sparkline') as HTMLElement;
+    // Without a fixed width, the chart container must fill the parent
+    // (width: 100%) and keep an explicit height so the SVG has room to
+    // render even when the parent hasn't measured yet.
+    const style = chart.getAttribute('style') ?? '';
+    expect(style).toMatch(/width:\s*100%/);
+    expect(style).toMatch(/height:\s*280/);
+  });
 });

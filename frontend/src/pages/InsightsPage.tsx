@@ -29,13 +29,15 @@ const MonthlySparkline = lazy(() =>
   import('@/organisms/charts/MonthlySparkline').then((m) => ({ default: m.MonthlySparkline })),
 );
 
+import { buildTrendForPeriod } from '@/organisms/charts/MonthlySparkline';
+
 type Period = 'this_month' | 'last_month' | 'last_3' | 'last_6' | 'last_12';
-const PERIODS: Array<{ value: Period; label: string }> = [
-  { value: 'this_month', label: 'Este mes' },
-  { value: 'last_month', label: 'Mes pasado' },
-  { value: 'last_3', label: 'Últimos 3' },
-  { value: 'last_6', label: 'Últimos 6' },
-  { value: 'last_12', label: 'Últimos 12' },
+const PERIODS: Array<{ value: Period; label: string; monthCount: number }> = [
+  { value: 'this_month', label: 'Este mes', monthCount: 1 },
+  { value: 'last_month', label: 'Mes pasado', monthCount: 2 },
+  { value: 'last_3', label: 'Últimos 3', monthCount: 3 },
+  { value: 'last_6', label: 'Últimos 6', monthCount: 6 },
+  { value: 'last_12', label: 'Últimos 12', monthCount: 12 },
 ];
 
 function periodStart(period: Period, now: Date): Date {
@@ -51,6 +53,10 @@ function periodStart(period: Period, now: Date): Date {
     case 'last_12':
       return new Date(now.getFullYear(), now.getMonth() - 11, 1);
   }
+}
+
+function periodMonthCount(period: Period): number {
+  return PERIODS.find((p) => p.value === period)?.monthCount ?? 6;
 }
 
 function ChartSkeleton({ height = 280 }: { height?: number }) {
@@ -162,28 +168,14 @@ export function InsightsPage({ apiBaseUrl }: InsightsPageProps) {
       .slice(0, 10);
   }, [filtered, categories.data]);
 
-  // 12-month trend.
+  // Trailing-window trend, sized to match the selected period so the chart
+  // matches what the user picked (Last 6 → 6 buckets, Last 12 → 12, etc.).
+  // Same FAILED-excluded / PENDING-included rule as the period filter above
+  // and the Dashboard MTD hero (REL-001).
   const trend = useMemo(() => {
-    const monthsLabels = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
-    const now = new Date();
-    const out: Array<{ month: string; totalCents: number }> = [];
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const next = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
-      const total = (transactions.data ?? [])
-        .filter((tx) => {
-          // Same rule as the period filter above: include CATEGORIZED + PENDING,
-          // exclude FAILED. Keeps Insights 12-month trend in parity with the
-          // Dashboard sparkline (REL-001).
-          if (tx.status === 'FAILED') return false;
-          const occurred = new Date(tx.occurredAt);
-          return occurred >= d && occurred < next;
-        })
-        .reduce((sum, tx) => sum + tx.amountCents, 0);
-      out.push({ month: `${monthsLabels[d.getMonth()]} ${d.getFullYear()}`, totalCents: total });
-    }
-    return out;
-  }, [transactions.data]);
+    const count = periodMonthCount(period);
+    return buildTrendForPeriod(transactions.data ?? [], count, new Date());
+  }, [transactions.data, period]);
 
   return (
     <section className="flex flex-col gap-8">
@@ -255,7 +247,7 @@ export function InsightsPage({ apiBaseUrl }: InsightsPageProps) {
               <h2 className="font-display text-lg font-bold text-ink-tinta">Tendencia de 12 meses</h2>
             </header>
             <Suspense fallback={<ChartSkeleton />}>
-              <MonthlySparkline data={trend} width={640} height={280} />
+              <MonthlySparkline data={trend} height={280} />
             </Suspense>
           </div>
 
