@@ -1,6 +1,12 @@
 /**
  * TransactionForm molecule — Litografía del Sur (REQ-FFC-TX-CREATE-FORM).
  *
+ * Editorial treatment:
+ * - Hairline-bottom input via FormField variant="editorial".
+ * - Asterism `* * *` divider in mono between sections.
+ * - AmountInput keeps its full cobalt-2 border (the signature: the cost is
+ *   the point).
+ *
  * Composes AmountInput + FormField rows. Calls useCreateTransaction on
  * submit; maps backend errors to inline field errors verbatim.
  */
@@ -23,6 +29,17 @@ interface FormErrors {
   accountId?: string;
   notes?: string;
   form?: string;
+}
+
+function Asterism() {
+  return (
+    <div
+      aria-hidden="true"
+      className="my-1 text-center font-mono text-xs uppercase tracking-[0.3em] text-ink-tinta-mute"
+    >
+      * * *
+    </div>
+  );
 }
 
 export function TransactionForm({ apiBaseUrl, userId }: TransactionFormProps) {
@@ -70,18 +87,11 @@ export function TransactionForm({ apiBaseUrl, userId }: TransactionFormProps) {
   };
 
   return (
-    <form onSubmit={submit} noValidate className="flex flex-col gap-3" data-testid="transaction-form">
-      <FormField
-        id="tx-amount"
-        label="Amount (cents)"
-        value={amount}
-        onChange={(e) => setAmount(e.target.value.replace(/\D+/g, ''))}
-        placeholder="420000"
-        error={errors.amount}
-      />
+    <form onSubmit={submit} noValidate className="flex flex-col gap-5" data-testid="transaction-form">
       <FormField
         id="tx-merchant"
         label="Merchant"
+        variant="editorial"
         value={merchant}
         onChange={(e) => setMerchant(e.target.value)}
         placeholder="PedidosYa"
@@ -92,6 +102,7 @@ export function TransactionForm({ apiBaseUrl, userId }: TransactionFormProps) {
         id="tx-occurredAt"
         label="Date"
         type="text"
+        variant="editorial"
         value={occurredAt}
         onChange={(e) => setOccurredAt(e.target.value)}
         placeholder="YYYY-MM-DD"
@@ -99,14 +110,17 @@ export function TransactionForm({ apiBaseUrl, userId }: TransactionFormProps) {
         error={errors.occurredAt}
       />
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="tx-account" className="font-body text-sm text-ink-tinta">
+        <label
+          htmlFor="tx-account"
+          className="block font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta-soft"
+        >
           Account
         </label>
         <select
           id="tx-account"
           value={accountId}
           onChange={(e) => setAccountId(e.target.value)}
-          className="h-10 rounded-sm border border-ink-paper-press bg-ink-paper-press px-3 font-body text-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-cobalto"
+          className="border-0 border-b border-ink-tinta bg-transparent px-0 py-2 font-body text-lg text-ink-tinta focus:border-ink-cobalto-deep focus:outline-none focus-visible:ring-0"
           required
         >
           <option value="">Select account…</option>
@@ -122,9 +136,31 @@ export function TransactionForm({ apiBaseUrl, userId }: TransactionFormProps) {
           </span>
         ) : null}
       </div>
+      <Asterism />
+      <div className="flex flex-col gap-1.5">
+        <label
+          htmlFor="tx-amount"
+          className="block font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta-soft"
+        >
+          Amount (cents)
+        </label>
+        <AmountInput
+          id="tx-amount"
+          value={amount}
+          onValueChange={setAmount}
+          invalid={Boolean(errors.amount)}
+          {...(errors.amount ? { describedById: 'tx-amount-error' } : {})}
+        />
+        {errors.amount ? (
+          <span id="tx-amount-error" role="alert" className="font-body text-sm text-ink-negativo">
+            {errors.amount}
+          </span>
+        ) : null}
+      </div>
       <FormField
         id="tx-notes"
         label="Notes"
+        variant="editorial"
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         placeholder="Optional"
@@ -138,9 +174,6 @@ export function TransactionForm({ apiBaseUrl, userId }: TransactionFormProps) {
           {create.isPending ? 'Saving…' : 'Log transaction'}
         </Button>
       </div>
-      {/* Hidden mount to expose the AmountInput contract on the form surface */}
-      <span data-testid="amount-input-marker" className="hidden" />
-      <AmountInput value={amount} onValueChange={setAmount} className="sr-only" />
     </form>
   );
 }

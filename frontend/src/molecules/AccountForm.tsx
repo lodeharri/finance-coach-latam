@@ -1,9 +1,12 @@
 /**
  * AccountForm molecule — Litografía del Sur (REQ-FFC-ACC-CREATE-FORM).
  *
- * Type glyph strip `BANK|CASH|CARD` per row (signature element). Composes
- * FormField rows. Calls useCreateAccount on submit; maps backend errors to
- * inline field errors verbatim.
+ * Signature: custom radio squares (BANK | CASH | CARD) — 32×32 squares with a
+ * cobalt inner square when checked. Mono caps label above. Hairline-bottom
+ * input for the name field.
+ *
+ * Composes FormField rows. Calls useCreateAccount on submit; maps backend
+ * errors to inline field errors verbatim.
  */
 import { useState } from 'react';
 import { Button } from '@/atoms/Button';
@@ -42,38 +45,57 @@ export function AccountForm({ apiBaseUrl, userId }: AccountFormProps) {
   };
 
   return (
-    <form onSubmit={submit} noValidate className="flex flex-col gap-3" data-testid="account-form">
+    <form onSubmit={submit} noValidate className="flex flex-col gap-5" data-testid="account-form">
       <FormField
         id="acc-name"
         label="Account name"
+        variant="editorial"
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Checking"
         required
         error={error}
       />
-      <div className="flex flex-col gap-1.5">
-        <span className="font-body text-sm text-ink-tinta">Type</span>
-        <div className="flex gap-2" role="radiogroup" aria-label="Account type">
-          {TYPES.map((t) => (
-            <button
-              key={t}
-              type="button"
-              role="radio"
-              aria-checked={type === t}
-              onClick={() => setType(t)}
-              className={
-                'inline-flex h-10 items-center justify-center rounded-sm border px-3 font-mono text-xs uppercase tracking-[0.2em] ' +
-                (type === t
-                  ? 'border-ink-cobalto bg-ink-cobalto text-ink-paper'
-                  : 'border-ink-paper-press bg-ink-paper-press text-ink-tinta hover:bg-ink-paper-lift')
-              }
-              data-testid={`account-type-${t}`}
-            >
-              {t}
-            </button>
-          ))}
+      <div className="flex flex-col gap-2">
+        <span className="block font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta-soft">
+          Tipo de cuenta
+        </span>
+        <div className="flex gap-3" role="radiogroup" aria-label="Account type">
+          {TYPES.map((t) => {
+            const active = type === t;
+            return (
+              <button
+                key={t}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => setType(t)}
+                className={
+                  'inline-flex h-12 w-12 items-center justify-center rounded-sm border transition-colors ' +
+                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-cobalto focus-visible:ring-offset-2 ' +
+                  (active
+                    ? 'border-ink-cobalto bg-ink-cobalto text-ink-paper'
+                    : 'border-ink-paper-press bg-ink-paper-lift text-ink-tinta hover:border-ink-cobalto/40')
+                }
+                data-testid={`account-type-${t}`}
+              >
+                <span
+                  aria-hidden="true"
+                  className={
+                    'block h-3 w-3 ' + (active ? 'bg-ink-paper' : 'border border-ink-tinta-mute')
+                  }
+                />
+                <span className="sr-only">{t}</span>
+              </button>
+            );
+          })}
         </div>
+        <span
+          aria-live="polite"
+          className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-tinta-mute"
+        >
+          Tipo seleccionado: {type}
+        </span>
       </div>
       <div>
         <Button type="submit" disabled={create.isPending}>

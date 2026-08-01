@@ -22,4 +22,28 @@ describe('AuthShell', () => {
     render(<AuthShell title="Sign in"><p>X</p></AuthShell>);
     expect(screen.getByRole('heading', { name: /sign in/i })).toBeInTheDocument();
   });
+
+  it('renders the editorial plate: cobalt 4 px top rule + hairline border', () => {
+    render(<AuthShell title="Sign in"><p>X</p></AuthShell>);
+    const card = screen.getByTestId('auth-shell-card');
+    expect(card.className).toMatch(/border-t-\[4px\]/);
+    expect(card.className).toMatch(/border-t-ink-cobalto/);
+    expect(card.className).toMatch(/border border-ink-paper-press/);
+  });
+
+  it('renders the kicker above the FINANZAS brand (signature: engraved plate)', () => {
+    render(<AuthShell title="Sign in"><p>X</p></AuthShell>);
+    const kicker = screen.getByTestId('auth-shell-kicker');
+    expect(kicker.textContent).toBe('EDICIÓN DE OTOÑO · 2026');
+    expect(kicker.className).toMatch(/font-mono/);
+    expect(kicker.className).toMatch(/tracking-\[0\.3em\]/);
+  });
+
+  it('renders the asterism divider between the title block and the form', () => {
+    render(<AuthShell title="Sign in"><p>X</p></AuthShell>);
+    const asterism = screen.getByTestId('auth-shell-asterism');
+    expect(asterism.textContent).toMatch(/\*\s*\*\s*\*/);
+    expect(asterism.className).toMatch(/font-mono/);
+    expect(asterism.className).toMatch(/tracking-\[0\.3em\]/);
+  });
 });
