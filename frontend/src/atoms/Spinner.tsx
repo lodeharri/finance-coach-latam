@@ -6,7 +6,7 @@
  * Atoms have no state, no API.
  */
 export interface SpinnerProps {
-  /** Required so screen readers announce what is loading. */
+  /** Accessible label for screen readers; required because the spinner is decorative. */
   'aria-label': string;
   size?: 'sm' | 'md' | 'lg';
 }
