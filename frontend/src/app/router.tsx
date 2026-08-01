@@ -17,10 +17,11 @@ import { LoginPage } from '@/pages/LoginPage';
 import { ForbiddenPage } from '@/pages/ForbiddenPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { CategoriesAdminPage } from '@/pages/CategoriesAdminPage';
-import { ComingSoonPage } from '@/pages/ComingSoonPage';
+import { DashboardPage } from '@/pages/DashboardPage';
 import { TransactionsPage } from '@/pages/TransactionsPage';
 import { AccountsPage } from '@/pages/AccountsPage';
 import { UsersAdminPage } from '@/pages/UsersAdminPage';
+import { InsightsPage } from '@/pages/InsightsPage';
 import { sessionStore, type Role } from '@/stores/sessionStore';
 import { AppShell } from '@/templates/AppShell';
 
@@ -72,9 +73,10 @@ export function routerConfig({ env }: { env: RouterEnv }) {
           element: <AppShell />,
           children: [
             { path: '/', element: <Navigate to="/dashboard" replace /> },
-            { path: '/dashboard', element: <ComingSoonPage /> },
+            { path: '/dashboard', element: <DashboardPage apiBaseUrl={env.VITE_API_BASE_URL} /> },
             { path: '/transactions', element: <TransactionsPage apiBaseUrl={env.VITE_API_BASE_URL} /> },
             { path: '/accounts', element: <AccountsPage apiBaseUrl={env.VITE_API_BASE_URL} /> },
+            { path: '/insights', element: <InsightsPage apiBaseUrl={env.VITE_API_BASE_URL} /> },
             {
               // eslint-disable-next-line jsx-a11y/aria-role -- `role` is a regular prop, not an ARIA role
               element: <RequireRole role="admin" />,
