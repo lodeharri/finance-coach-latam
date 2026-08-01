@@ -11,6 +11,7 @@
 import type { ReactNode } from 'react';
 import { HexStamp } from '@/atoms/HexStamp';
 import { RoleBadge } from '@/molecules/RoleBadge';
+import { ToastHost } from '@/organisms/ToastHost';
 
 export interface AppShellProps {
   pageName: string;
@@ -54,6 +55,7 @@ export function AppShell({ pageName, role, children }: AppShellProps) {
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>
+      <ToastHost />
     </div>
   );
 }
