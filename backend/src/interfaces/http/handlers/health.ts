@@ -1,9 +1,9 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyHandlerV2 } from 'aws-lambda';
-import type { RecordHealthCheckUseCase } from '../../application/use-cases/record-health-check.use-case';
-import type { ListHealthChecksUseCase } from '../../application/use-cases/list-health-checks.use-case';
-import { getConfig } from '../../infrastructure/config/env.config';
+import type { RecordHealthCheckUseCase } from '../../../application/use-cases/record-health-check.use-case';
+import type { ListHealthChecksUseCase } from '../../../application/use-cases/list-health-checks.use-case';
+import { getConfig } from '../../../infrastructure/config/env.config';
 
-interface HealthDeps {
+export interface HealthRoutes {
   recordHealthCheckUseCase: RecordHealthCheckUseCase;
   listHealthChecksUseCase: ListHealthChecksUseCase;
 }
@@ -55,7 +55,7 @@ function jsonResponse(
   };
 }
 
-export function healthHandler(deps: HealthDeps): APIGatewayProxyHandlerV2 {
+export function createHealthRoutes(deps: HealthRoutes): APIGatewayProxyHandlerV2 {
   return async (event) => {
     const method = event.requestContext.http.method;
     const path = event.rawPath;
