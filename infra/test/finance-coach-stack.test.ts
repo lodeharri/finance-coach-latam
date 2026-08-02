@@ -168,4 +168,33 @@ describe('FinanceCoachStack API Gateway per-route throttling', () => {
     const extra = declared.filter((k) => !expected.has(k));
     expect(extra, `extra routes in RouteSettings not declared in test contract: ${extra.join(', ')}`).toEqual([]);
   });
+
+  /**
+   * Defense-in-depth cost guard: cap the API Lambda at 5 concurrent
+   * invocations so a runaway client (or a stolen token used in a tight
+   * loop) cannot pin all 1,000 account-level concurrency units on a single
+   * function and rack up Lambda GB-second charges. Throttle at the API
+   * Gateway edge is the soft cap; this is the hard one.
+   */
+  it('caps the apiFunction at 5 concurrent invocations (reserved concurrency)', () => {
+    const apiFunctions = template.findResources('AWS::Lambda::Function', {
+      Properties: {
+        Handler: 'handler.handler',
+        Runtime: 'nodejs24.x',
+      },
+    }) as Record<string, { Properties: { ReservedConcurrentExecutions?: number } }>;
+
+    // The api handler is the one that takes user traffic. The categorizer
+    // and migration Lambdas have different handlers (handler.handler in
+    // their own bundles) and intentionally no reserved concurrency cap —
+    // they run on SQS / one-shot invocations, not user-facing.
+    const apiEntries = Object.entries(apiFunctions).filter(([, r]) =>
+      r.Properties.Handler === 'handler.handler' &&
+      r.Properties.ReservedConcurrentExecutions !== undefined
+    );
+    expect(apiEntries.length, 'expected at least one api handler with reserved concurrency').toBeGreaterThan(0);
+    for (const [name, r] of apiEntries) {
+      expect(r.Properties.ReservedConcurrentExecutions, `${name} reserved concurrency`).toBe(5);
+    }
+  });
 });

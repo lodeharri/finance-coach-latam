@@ -118,6 +118,7 @@ export class FinanceCoachStack extends cdk.Stack {
       code: lambda.Code.fromAsset('../backend/dist/api'),
       memorySize: 512,
       timeout: Duration.seconds(30),
+      reservedConcurrentExecutions: 5,
       environment: {
         DATABASE_URL: databaseUrl,
         LLM_PROVIDER: llmProvider,
