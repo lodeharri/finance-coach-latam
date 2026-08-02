@@ -210,6 +210,36 @@ export class FinanceCoachStack extends cdk.Stack {
       throttlingRateLimit: 100,
     };
 
+    // Per-route throttle overrides — tighter limits on routes that are
+    // expensive (writes) or sensitive (admin, LLM-backed). These are the
+    // safety floor for free-tier cost: a DoS that races the gateway
+    // accounting to 10,000 RPS would burn real money on Lambda + Neon.
+    // A normal user doing 5 req/sec for 5 seconds (25 req burst) is well
+    // under every limit below. The contract is pinned by
+    // `infra/test/finance-coach-stack.test.ts`.
+    //
+    // NOTE: keys MUST be PascalCase. `CfnStage.routeSettings` is typed as
+    // `any | IResolvable` (map values), so CDK does NOT run its automatic
+    // camelCase→PascalCase translation on each entry. Passing
+    // `throttlingRateLimit` here produces `throttlingRateLimit` in the
+    // synthesized CloudFormation, which AWS silently ignores. PascalCase
+    // passes through to CloudFormation unchanged.
+    stage.routeSettings = {
+      'GET /transactions': { ThrottlingRateLimit: 100, ThrottlingBurstLimit: 50 },
+      'GET /accounts': { ThrottlingRateLimit: 50, ThrottlingBurstLimit: 20 },
+      'GET /categories': { ThrottlingRateLimit: 50, ThrottlingBurstLimit: 20 },
+      'GET /users': { ThrottlingRateLimit: 30, ThrottlingBurstLimit: 10 },
+      'POST /transactions': { ThrottlingRateLimit: 30, ThrottlingBurstLimit: 10 },
+      'POST /accounts': { ThrottlingRateLimit: 15, ThrottlingBurstLimit: 5 },
+      'POST /categories': { ThrottlingRateLimit: 15, ThrottlingBurstLimit: 5 },
+      'PATCH /transactions/{id}': { ThrottlingRateLimit: 30, ThrottlingBurstLimit: 10 },
+      'DELETE /categories/{id}': { ThrottlingRateLimit: 30, ThrottlingBurstLimit: 10 },
+      'DELETE /users/{id}': { ThrottlingRateLimit: 10, ThrottlingBurstLimit: 3 },
+      'PATCH /categories/{id}': { ThrottlingRateLimit: 30, ThrottlingBurstLimit: 10 },
+      'PATCH /accounts/{id}': { ThrottlingRateLimit: 15, ThrottlingBurstLimit: 5 },
+      'POST /transactions/{id}/categorize': { ThrottlingRateLimit: 10, ThrottlingBurstLimit: 3 },
+    };
+
     const healthIntegration = new HttpLambdaIntegration('HealthIntegration', healthFunction);
     const publicAuthorizer = new apigwv2.HttpNoneAuthorizer();
 

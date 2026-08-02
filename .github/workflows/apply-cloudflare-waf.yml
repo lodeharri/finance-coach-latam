@@ -1,0 +1,52 @@
+name: apply-cloudflare-waf
+
+# Applies the WAF rate-limit rule to the Cloudflare zone whenever the
+# rule config changes. Idempotent — re-running with the same config is
+# a no-op (the script updates the rule in place).
+#
+# Required repository secrets:
+#   CLOUDFLARE_API_TOKEN  — zone-scoped token with WAF edit permission
+#   CLOUDFLARE_ZONE_ID    — the zone id of finance-coach-latam.com
+#
+# The free plan caps rate-limit rules at 1; this workflow deploys that
+# single rule. If you need more rules, upgrade the plan or remove this
+# one first.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'infra/cloudflare/**'
+      - '.github/workflows/apply-cloudflare-waf.yml'
+  workflow_dispatch:                    # manual re-run from the Actions UI
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apply-cloudflare-waf
+  cancel-in-progress: true
+
+jobs:
+  apply:
+    name: Upsert WAF rate-limit rule
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Validate rule config
+        working-directory: infra/cloudflare
+        run: |
+          jq -e '.name and .description and .expression and .action and .ratelimit' waf-rate-limit.json > /dev/null
+          echo ">>> Rule config validated"
+
+      - name: Apply WAF rule
+        working-directory: infra/cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ZONE_ID:   ${{ secrets.CLOUDFLARE_ZONE_ID }}
+        run: ./apply-waf.sh

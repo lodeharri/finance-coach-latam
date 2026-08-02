@@ -1,0 +1,12 @@
+{
+  "name": "block-excessive-requests",
+  "description": "Block excessive requests to finance-coach-latam SPA — free tier WAF rate limit. Source of truth for infra/cloudflare/apply-waf.sh; edit here, re-run the script.",
+  "action": "block",
+  "expression": "not http.request.uri.path in {\"/favicon.ico\" \"/assets/*\" \"/index.html\" \"/robots.txt\" \"/sitemap.xml\"}",
+  "ratelimit": {
+    "characteristics": ["ip.src"],
+    "period": 10,
+    "requests_per_period": 100,
+    "mitigation_timeout": 10
+  }
+}
