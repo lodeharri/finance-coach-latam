@@ -219,7 +219,11 @@ describe('AccountForm', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
-  it('keeps the field values populated after a successful submit (no implicit reset)', async () => {
+  it('resets its fields after a successful submit (modal flow contract)', async () => {
+    // The modal flow requires that the form is empty when re-opened. The
+    // form's own onSuccess handler resets internal state so the next entry
+    // starts from scratch. The same contract applies even if the parent
+    // unmounts the form via the modal close.
     server.use(
       http.post(`${BASE}/accounts`, () =>
         // Full Account — apiClient parses /accounts responses through
@@ -248,10 +252,10 @@ describe('AccountForm', () => {
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /agregar cuenta/i })).toBeEnabled(),
     );
-    // The form does not auto-reset. The current behavior is to leave the
-    // values in place; this test pins that contract.
-    expect(nameInput.value).toBe('Checking');
-    expect(screen.getByRole('radio', { name: 'CARD' })).toHaveAttribute('aria-checked', 'true');
+    // Fields are reset to their initial empty state so the user can create
+    // another account without manually clearing the form.
+    expect(nameInput.value).toBe('');
+    expect(screen.getByRole('radio', { name: 'BANK' })).toHaveAttribute('aria-checked', 'true');
     // No inline error surfaced (REL-003).
     expect(screen.queryByRole('alert')).toBeNull();
   });

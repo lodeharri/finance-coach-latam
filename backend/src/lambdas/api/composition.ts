@@ -4,6 +4,7 @@ import { CreateCategoryUseCase } from '../../application/use-cases/create-catego
 import { CreateTransactionUseCase } from '../../application/use-cases/create-transaction.use-case';
 import { CreateUserUseCase } from '../../application/use-cases/create-user.use-case';
 import { DeleteCategoryUseCase } from '../../application/use-cases/delete-category.use-case';
+import { DeleteUserUseCase } from '../../application/use-cases/delete-user.use-case';
 import { ListAccountsByUserUseCase } from '../../application/use-cases/list-accounts-by-user.use-case';
 import { ListCategoriesUseCase } from '../../application/use-cases/list-categories.use-case';
 import { ListTransactionsByUserUseCase } from '../../application/use-cases/list-transactions-by-user.use-case';
@@ -48,6 +49,7 @@ export function buildApiComposition() {
   return createApiRoutes({
     createUserUseCase: new CreateUserUseCase(database, auth, userTableRef),
     listUsersUseCase: new ListUsersUseCase(database, userTableRef),
+    deleteUserUseCase: new DeleteUserUseCase(database, userTableRef),
     createAccountUseCase: new CreateAccountUseCase(database, accountTableRef),
     listAccountsByUserUseCase: new ListAccountsByUserUseCase(
       database,

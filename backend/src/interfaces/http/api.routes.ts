@@ -4,6 +4,7 @@ import type { CreateCategoryUseCase } from '../../application/use-cases/create-c
 import type { CreateTransactionUseCase } from '../../application/use-cases/create-transaction.use-case';
 import type { CreateUserUseCase } from '../../application/use-cases/create-user.use-case';
 import type { DeleteCategoryUseCase } from '../../application/use-cases/delete-category.use-case';
+import type { DeleteUserUseCase } from '../../application/use-cases/delete-user.use-case';
 import type { ListAccountsByUserUseCase } from '../../application/use-cases/list-accounts-by-user.use-case';
 import type { ListCategoriesUseCase } from '../../application/use-cases/list-categories.use-case';
 import type { ListTransactionsByUserUseCase } from '../../application/use-cases/list-transactions-by-user.use-case';
@@ -19,6 +20,7 @@ import { createUsersRoutes } from './users.routes';
 export interface ApiRoutesDeps {
   readonly createUserUseCase: CreateUserUseCase;
   readonly listUsersUseCase: ListUsersUseCase;
+  readonly deleteUserUseCase: DeleteUserUseCase;
   readonly createAccountUseCase: CreateAccountUseCase;
   readonly listAccountsByUserUseCase: ListAccountsByUserUseCase;
   readonly listCategoriesUseCase: ListCategoriesUseCase;
@@ -38,7 +40,9 @@ export function createApiRoutes(deps: ApiRoutesDeps): HttpRouteHandler {
   const transactions = createTransactionsRoutes(deps);
 
   return async (event) => {
-    if (event.rawPath === '/users') return users(event);
+    if (event.rawPath === '/users' || /^\/users\/[^/]+$/.test(event.rawPath)) {
+      return users(event);
+    }
     if (event.rawPath === '/accounts') return accounts(event);
     if (
       event.rawPath === '/categories' ||

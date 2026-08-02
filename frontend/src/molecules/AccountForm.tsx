@@ -17,11 +17,17 @@ import type { AccountType } from '@/services/types';
 export interface AccountFormProps {
   apiBaseUrl: string;
   userId: string;
+  /**
+   * Optional callback fired after a successful create. The modal flow uses
+   * this to close the dialog. The form also resets its own state on success
+   * so the next entry starts from empty (REQ-FF-ADMIN-CRUD-MODAL).
+   */
+  onCreated?: () => void;
 }
 
 const TYPES: AccountType[] = ['BANK', 'CASH', 'CARD'];
 
-export function AccountForm({ apiBaseUrl, userId }: AccountFormProps) {
+export function AccountForm({ apiBaseUrl, userId, onCreated }: AccountFormProps) {
   const [name, setName] = useState('');
   const [type, setType] = useState<AccountType>('BANK');
   const [error, setError] = useState<string | undefined>();
@@ -37,8 +43,17 @@ export function AccountForm({ apiBaseUrl, userId }: AccountFormProps) {
     create.mutate(
       { userId, name: name.trim(), type },
       {
+        onSuccess: () => {
+          // Reset internal state so the next entry starts from empty. The
+          // modal flow also closes via onCreated (which unmounts the form
+          // and naturally drops the state, but we reset eagerly so a
+          // non-modal usage gets the same guarantee).
+          setName('');
+          setType('BANK');
+          onCreated?.();
+        },
         onError: (err) => {
-          setError(err instanceof Error ? err.message : 'No se pudo crear la cuenta.');
+          setError(err instanceof Error ? err.message : 'Could not create account.');
         },
       },
     );

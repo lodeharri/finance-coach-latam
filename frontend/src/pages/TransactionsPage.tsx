@@ -4,11 +4,7 @@
  * Editorial treatment:
  * - Kicker `LIBRO DIARIO · 2026` in mono caps above the page title.
  * - Row count strip `042 MOVIMIENTOS` in mono on the right of the header.
- * - Asterism caption above the form section.
- *
- * Lists transactions for the current user (or admin-targeted userId via
- * query string). Composes TransactionTable + TransactionForm. ForbiddenPage
- * for 403, loading/empty/error states reuse foundation patterns.
+ * - Range indicator `Mostrando N · PÁGINA X` below the header.
  *
  * Pagination: PAGE_SIZE rows per page, offset-based navigation through
  * the Pagination molecule. Backend does not return a total count, so
@@ -16,10 +12,16 @@
  * PAGE_SIZE), and totalPages is computed as currentPage + 1 while the user
  * keeps clicking Next. Visiting a specific page directly is supported
  * through the page tokens.
+ *
+ * The create form is mounted inside a modal opened from a header button.
+ * Closing the modal on success unmounts the form and naturally resets all
+ * field state for the next entry.
  */
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { Button } from '@/atoms/Button';
 import { ForbiddenPage } from './ForbiddenPage';
+import { Modal } from '@/molecules/Modal';
 import { TransactionForm } from '@/molecules/TransactionForm';
 import { TransactionTable } from '@/organisms/TransactionTable';
 import { Pagination } from '@/molecules/Pagination';
@@ -41,6 +43,7 @@ export function TransactionsPage({ apiBaseUrl }: TransactionsPageProps) {
   const isAdminTarget = Boolean(params.get('userId')) && role === 'admin';
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [createOpen, setCreateOpen] = useState(false);
   const offset = (currentPage - 1) * PAGE_SIZE;
 
   const transactions = useTransactions({
@@ -79,12 +82,22 @@ export function TransactionsPage({ apiBaseUrl }: TransactionsPageProps) {
           <h1 className="font-display text-2xl font-bold text-ink-tinta">
             {isAdminTarget ? `Transacciones de ${userId}` : 'Mis transacciones'}
           </h1>
-          <span
-            className="font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta-mute"
-            data-testid="row-count"
-          >
-            {String(rows.length).padStart(3, '0')} MOVIMIENTOS
-          </span>
+          <div className="flex items-center gap-4">
+            <span
+              className="font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta-mute"
+              data-testid="row-count"
+            >
+              {String(rows.length).padStart(3, '0')} MOVIMIENTOS
+            </span>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => setCreateOpen(true)}
+              data-testid="transactions-new-button"
+            >
+              + Nueva transacción
+            </Button>
+          </div>
         </div>
       </header>
       <p
@@ -106,15 +119,17 @@ export function TransactionsPage({ apiBaseUrl }: TransactionsPageProps) {
         totalPages={totalPages}
         onPageChange={setCurrentPage}
       />
-      <section className="mt-2">
-        <header className="mb-4 flex items-baseline justify-between">
-          <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-tinta-mute">
-            * * *&nbsp;&nbsp;NUEVO MOVIMIENTO
-          </span>
-          <h2 className="font-display text-lg font-bold text-ink-tinta">Registrar transacción</h2>
-        </header>
-        <TransactionForm apiBaseUrl={apiBaseUrl} userId={userId} />
-      </section>
+      <Modal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title="Nueva transacción"
+      >
+        <TransactionForm
+          apiBaseUrl={apiBaseUrl}
+          userId={userId}
+          onCreated={() => setCreateOpen(false)}
+        />
+      </Modal>
     </section>
   );
 }

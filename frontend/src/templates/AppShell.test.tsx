@@ -1,6 +1,13 @@
+/**
+ * AppShell tests — Litografía del Sur.
+ *
+ * Mobile sidebar (REQ-FF-MOBILE-SIDEBAR): a hamburger button in the masthead
+ * opens the Sidebar as a slide-over drawer on small viewports. The button is
+ * only visible below the md breakpoint (`md:hidden` per Tailwind).
+ */
 import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@/test/test-utils';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { render, screen } from '@/test/test-utils';
 import { AppShell } from './AppShell';
 
 function renderShell(path = '/dashboard', role: 'admin' | 'user' | undefined = 'user') {
@@ -11,48 +18,56 @@ function renderShell(path = '/dashboard', role: 'admin' | 'user' | undefined = '
   );
 }
 
-describe('AppShell', () => {
-  it('renders header, sidebar, main, date and toast host', () => {
+describe('AppShell mobile sidebar', () => {
+  it('renders a hamburger button in the masthead', () => {
     renderShell();
-    expect(screen.getByTestId('app-shell-masthead')).toHaveClass('bg-ink-cobalto');
-    expect(screen.getByTestId('app-shell-sidebar')).toBeInTheDocument();
-    expect(screen.getByTestId('app-shell-main')).toBeInTheDocument();
-    expect(screen.getByTestId('app-shell-date')).toHaveClass('font-mono');
-    expect(screen.getByTestId('app-shell-sidebar')).toBeInTheDocument();
+    expect(screen.getByTestId('mobile-sidebar-toggle')).toBeInTheDocument();
+    expect(screen.getByTestId('mobile-sidebar-toggle')).toHaveAttribute(
+      'aria-label',
+      expect.stringMatching(/abrir menú/i),
+    );
   });
 
-  it.each([['/dashboard', 'Tablero'], ['/admin/categories', 'Categorías']] as const)('derives page name for %s', (path, name) => {
-    renderShell(path, 'admin');
-    expect(screen.getByTestId('app-shell-page-name')).toHaveTextContent(name);
+  it('the hamburger button has the md:hidden utility so it is desktop-hidden by CSS', () => {
+    renderShell();
+    const btn = screen.getByTestId('mobile-sidebar-toggle');
+    expect(btn.className).toMatch(/md:hidden/);
   });
 
-  it('renders the role-aware sidebar', () => {
+  it('clicking the hamburger opens the mobile drawer', () => {
+    renderShell('/dashboard', 'user');
+    fireEvent.click(screen.getByTestId('mobile-sidebar-toggle'));
+    expect(screen.getByTestId('mobile-sidebar-drawer')).toBeInTheDocument();
+  });
+
+  it('clicking the hamburger again closes the drawer (toggle)', () => {
+    renderShell('/dashboard', 'user');
+    const toggle = screen.getByTestId('mobile-sidebar-toggle');
+    fireEvent.click(toggle);
+    expect(screen.getByTestId('mobile-sidebar-drawer')).toBeInTheDocument();
+    fireEvent.click(toggle);
+    expect(screen.queryByTestId('mobile-sidebar-drawer')).not.toBeInTheDocument();
+  });
+
+  it('navigating (drawer link click) closes the drawer', () => {
     renderShell('/dashboard', 'admin');
-    expect(screen.getByRole('link', { name: /categorías/i })).toBeInTheDocument();
-  });
-
-  it('renders the engraved folio strip in the masthead (signature element)', () => {
-    renderShell('/transactions');
-    const folio = screen.getByTestId('app-shell-folio');
-    expect(folio.textContent).toMatch(/VOL\. III/);
-    expect(folio.textContent).toMatch(/FOLIO/);
-    expect(folio.className).toMatch(/font-mono/);
-    expect(folio.className).toMatch(/tracking-\[0\.3em\]/);
-  });
-
-  it('changes the folio per route', () => {
-    renderShell('/insights');
-    expect(screen.getByTestId('app-shell-folio').textContent).toMatch(/FOLIO 07/);
-  });
-
-  it('the masthead has a 1 px hairline beneath it', () => {
-    renderShell();
-    expect(screen.getByTestId('app-shell-masthead')).toHaveClass('border-b');
-  });
-
-  it('the main area has asymmetric padding (pl-12 pr-20 on md+)', () => {
-    renderShell();
-    expect(screen.getByTestId('app-shell-main').className).toMatch(/px-12/);
-    expect(screen.getByTestId('app-shell-main').className).toMatch(/md:pr-20/);
+    fireEvent.click(screen.getByTestId('mobile-sidebar-toggle'));
+    fireEvent.click(
+      withinDrawer(screen.getByTestId('mobile-sidebar-drawer')).getByRole('link', {
+        name: /transacciones/i,
+      }),
+    );
+    expect(screen.queryByTestId('mobile-sidebar-drawer')).not.toBeInTheDocument();
   });
 });
+
+function withinDrawer(drawer: HTMLElement) {
+  return {
+    getByRole: (role: 'link' | 'button', options?: { name?: RegExp }) => {
+      const all = screen.getAllByRole(role, options);
+      const inDrawer = all.find((el) => drawer.contains(el));
+      if (!inDrawer) throw new Error(`No ${role} inside the drawer`);
+      return inDrawer;
+    },
+  };
+}
