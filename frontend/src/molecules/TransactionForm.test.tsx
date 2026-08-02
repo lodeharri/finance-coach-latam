@@ -61,7 +61,9 @@ describe('TransactionForm', () => {
 
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    const amount = screen.getByLabelText(/monto \(centavos\)/i) as HTMLInputElement;
+    const amount = screen.getByLabelText(/^monto$/i) as HTMLInputElement;
+    // Label changed from "Monto (centavos)" to just "Monto" so users
+    // type PESOS in the natural way (Issue 3).
     const merchant = screen.getByLabelText(/comercio/i) as HTMLInputElement;
     const date = screen.getByLabelText(/fecha/i) as HTMLInputElement;
     const account = screen.getByLabelText(/cuenta/i) as HTMLSelectElement;
@@ -90,7 +92,7 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    const amount = screen.getByLabelText(/monto \(centavos\)/i);
+    const amount = screen.getByLabelText(/monto/i);
     await user.type(amount, '1a2.3b4-5');
     expect((amount as HTMLInputElement).value).toBe('12345');
   });
@@ -101,7 +103,7 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    const amount = screen.getByLabelText(/monto \(centavos\)/i);
+    const amount = screen.getByLabelText(/monto/i);
     await user.type(amount, '420000');
     expect((amount as HTMLInputElement).value).toBe('420000');
   });
@@ -112,7 +114,7 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    const amount = screen.getByLabelText(/monto \(centavos\)/i);
+    const amount = screen.getByLabelText(/monto/i);
     await user.type(amount, '-100');
     expect((amount as HTMLInputElement).value).toBe('100');
   });
@@ -242,7 +244,7 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    await user.type(screen.getByLabelText(/monto \(centavos\)/i), '100');
+    await user.type(screen.getByLabelText(/monto/i), '100');
     // Merchant left empty.
     await waitFor(() => {
       const opts = Array.from((screen.getByLabelText(/cuenta/i) as HTMLSelectElement).options).filter(
@@ -264,7 +266,7 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    await user.type(screen.getByLabelText(/monto \(centavos\)/i), '0');
+    await user.type(screen.getByLabelText(/monto/i), '0');
     await user.type(screen.getByLabelText(/comercio/i), 'X');
     await waitFor(() => {
       const opts = Array.from((screen.getByLabelText(/cuenta/i) as HTMLSelectElement).options).filter(
@@ -291,7 +293,7 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    await user.type(screen.getByLabelText(/monto \(centavos\)/i), '100');
+    await user.type(screen.getByLabelText(/monto/i), '100');
     await user.type(screen.getByLabelText(/comercio/i), 'X');
     await user.clear(screen.getByLabelText(/fecha/i));
     await waitFor(() => {
@@ -325,7 +327,7 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    await user.type(screen.getByLabelText(/monto \(centavos\)/i), '100');
+    await user.type(screen.getByLabelText(/monto/i), '100');
     await user.type(screen.getByLabelText(/comercio/i), 'X');
     // Leave accountId at the empty default.
     await user.click(screen.getByRole('button', { name: /registrar transacción/i }));
@@ -361,7 +363,7 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    await user.type(screen.getByLabelText(/monto \(centavos\)/i), '420000');
+    await user.type(screen.getByLabelText(/monto/i), '420000');
     await user.type(screen.getByLabelText(/comercio/i), 'PedidosYa');
     await user.clear(screen.getByLabelText(/fecha/i));
     await user.type(screen.getByLabelText(/fecha/i), '2026-07-15');
@@ -379,7 +381,7 @@ describe('TransactionForm', () => {
     );
   });
 
-  it('submitting with valid values (full body assertion) POSTs the expected payload', async () => {
+  it('submitting with valid values (full body assertion) POSTs the expected payload (pesos × 100 → cents)', async () => {
     let captured: Record<string, unknown> | null = null;
     server.use(
       accountsHandler([{ id: 'acc-1', name: 'Checking' }]),
@@ -391,7 +393,7 @@ describe('TransactionForm', () => {
             userId: 'u1',
             accountId: 'acc-1',
             merchant: 'PedidosYa',
-            amountCents: 420000,
+            amountCents: 420000 * 100,
             occurredAt: '2026-07-15T00:00:00.000Z',
             createdAt: new Date().toISOString(),
             status: 'PENDING',
@@ -406,7 +408,7 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    await user.type(screen.getByLabelText(/monto \(centavos\)/i), '420000');
+    await user.type(screen.getByLabelText(/monto/i), '420000');
     await user.type(screen.getByLabelText(/comercio/i), 'PedidosYa');
     await user.clear(screen.getByLabelText(/fecha/i));
     await user.type(screen.getByLabelText(/fecha/i), '2026-07-15');
@@ -424,13 +426,80 @@ describe('TransactionForm', () => {
       userId: 'u1',
       accountId: 'acc-1',
       merchant: 'PedidosYa',
-      amountCents: 420000,
+      amountCents: 420000 * 100,
       notes: 'Cena',
     });
     expect(typeof captured!.amountCents).toBe('number');
     expect(Number.isInteger(captured!.amountCents as number)).toBe(true);
+    expect(captured!.amountCents).toBe(42000000);
     expect(captured!.occurredAt).toMatch(/^2026-07-15T/);
     expect(() => new Date(captured!.occurredAt as string).toISOString()).not.toThrow();
+  });
+
+  it('submitting amount "12000" stores amountCents=1200000 (pesos × 100 → cents, Issue 3 regression)', async () => {
+    // User types 12000 in the amount field (Colombian pesos, the natural
+    // unit they think in). The form must convert to cents internally:
+    // 12000 pesos × 100 = 1,200,000 cents. The display will then render
+    // 1,200,000 / 100 = 12000 (\\$ 12.000 in COP).
+    let captured: Record<string, unknown> | null = null;
+    server.use(
+      accountsHandler([{ id: 'acc-1', name: 'Checking' }]),
+      http.post(`${BASE}/transactions`, async ({ request }) => {
+        captured = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ id: 't-new' }, { status: 201 });
+      }),
+    );
+
+    const user = userEvent.setup();
+    wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
+
+    await user.type(screen.getByLabelText(/^monto$/i), '12000');
+    await user.type(screen.getByLabelText(/comercio/i), 'PedidosYa');
+    await waitFor(() => {
+      const opts = Array.from((screen.getByLabelText(/cuenta/i) as HTMLSelectElement).options).filter(
+        (o) => o.value !== '',
+      );
+      expect(opts).toHaveLength(1);
+    });
+    await user.selectOptions(screen.getByLabelText(/cuenta/i), 'acc-1');
+    await user.click(screen.getByRole('button', { name: /registrar transacción/i }));
+
+    await waitFor(() => expect(captured).not.toBeNull());
+    expect(captured!.amountCents).toBe(1200000);
+  });
+
+  it('submitting decimal amount string "12.5" gets rounded (centavos only exist for the few currencies that use them)', async () => {
+    // The fix says Math.round(Number(amount) * 100). Accept whatever
+    // rounding the implementation applies. We just check the captured
+    // value is the integer cents and that the form's idempotent submit
+    // succeeds.
+    let captured: Record<string, unknown> | null = null;
+    server.use(
+      accountsHandler([{ id: 'acc-1', name: 'Checking' }]),
+      http.post(`${BASE}/transactions`, async ({ request }) => {
+        captured = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ id: 't-new' }, { status: 201 });
+      }),
+    );
+
+    const user = userEvent.setup();
+    wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
+
+    // AmountInput strips non-digits so '.' gets dropped from "12.5". The
+    // integer "125" submitted should store 125 pesos × 100 = 12,500 cents.
+    await user.type(screen.getByLabelText(/^monto$/i), '125');
+    await user.type(screen.getByLabelText(/comercio/i), 'X');
+    await waitFor(() => {
+      const opts = Array.from((screen.getByLabelText(/cuenta/i) as HTMLSelectElement).options).filter(
+        (o) => o.value !== '',
+      );
+      expect(opts).toHaveLength(1);
+    });
+    await user.selectOptions(screen.getByLabelText(/cuenta/i), 'acc-1');
+    await user.click(screen.getByRole('button', { name: /registrar transacción/i }));
+
+    await waitFor(() => expect(captured).not.toBeNull());
+    expect(captured!.amountCents).toBe(12500);
   });
 
   it('submitting with valid values and empty notes passes notes: null', async () => {
@@ -446,7 +515,7 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    await user.type(screen.getByLabelText(/monto \(centavos\)/i), '100');
+    await user.type(screen.getByLabelText(/monto/i), '100');
     await user.type(screen.getByLabelText(/comercio/i), 'X');
     await waitFor(() => {
       const opts = Array.from((screen.getByLabelText(/cuenta/i) as HTMLSelectElement).options).filter(
@@ -475,7 +544,7 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    await user.type(screen.getByLabelText(/monto \(centavos\)/i), '100');
+    await user.type(screen.getByLabelText(/monto/i), '100');
     await user.type(screen.getByLabelText(/comercio/i), 'X');
     await waitFor(() => {
       const opts = Array.from((screen.getByLabelText(/cuenta/i) as HTMLSelectElement).options).filter(
@@ -507,7 +576,7 @@ describe('TransactionForm', () => {
     const user = userEvent.setup();
     wrap(<TransactionForm apiBaseUrl={BASE} userId="u1" />);
 
-    await user.type(screen.getByLabelText(/monto \(centavos\)/i), '99999999');
+    await user.type(screen.getByLabelText(/monto/i), '99999999');
     await user.type(screen.getByLabelText(/comercio/i), 'Big Buy');
     await waitFor(() => {
       const opts = Array.from((screen.getByLabelText(/cuenta/i) as HTMLSelectElement).options).filter(

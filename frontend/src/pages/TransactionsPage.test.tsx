@@ -139,7 +139,7 @@ describe('TransactionsPage — modal create flow', () => {
     await user.click(screen.getByRole('button', { name: /\+ nueva transacción/i }));
 
     const dialog = await screen.findByRole('dialog');
-    await user.type(withinDialog(dialog).getByLabelText(/monto \(centavos\)/i), '420000');
+    await user.type(withinDialog(dialog).getByLabelText(/monto/i), '420000');
     await user.type(withinDialog(dialog).getByLabelText(/comercio/i), 'PedidosYa');
     await user.clear(withinDialog(dialog).getByLabelText(/fecha/i));
     await user.type(withinDialog(dialog).getByLabelText(/fecha/i), '2026-07-15');
@@ -184,7 +184,7 @@ describe('TransactionsPage — modal create flow', () => {
     // First create.
     await user.click(screen.getByRole('button', { name: /\+ nueva transacción/i }));
     let dialog = await screen.findByRole('dialog');
-    await user.type(withinDialog(dialog).getByLabelText(/monto \(centavos\)/i), '100');
+    await user.type(withinDialog(dialog).getByLabelText(/monto/i), '100');
     await user.type(withinDialog(dialog).getByLabelText(/comercio/i), 'Mercado');
     await waitFor(() => {
       const opts = Array.from(
@@ -200,7 +200,7 @@ describe('TransactionsPage — modal create flow', () => {
     await user.click(screen.getByRole('button', { name: /\+ nueva transacción/i }));
     dialog = await screen.findByRole('dialog');
     expect(
-      (withinDialog(dialog).getByLabelText(/monto \(centavos\)/i) as HTMLInputElement).value,
+      (withinDialog(dialog).getByLabelText(/monto/i) as HTMLInputElement).value,
     ).toBe('');
     expect((withinDialog(dialog).getByLabelText(/comercio/i) as HTMLInputElement).value).toBe('');
     expect((withinDialog(dialog).getByLabelText(/notas/i) as HTMLInputElement).value).toBe('');
