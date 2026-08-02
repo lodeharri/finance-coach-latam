@@ -235,8 +235,18 @@ export class FinanceCoachStack extends cdk.Stack {
       integration: apiIntegration,
     });
     httpApi.addRoutes({
+      path: '/users/{id}',
+      methods: [apigwv2.HttpMethod.PATCH, apigwv2.HttpMethod.DELETE],
+      integration: apiIntegration,
+    });
+    httpApi.addRoutes({
       path: '/accounts',
       methods: [apigwv2.HttpMethod.GET, apigwv2.HttpMethod.POST],
+      integration: apiIntegration,
+    });
+    httpApi.addRoutes({
+      path: '/accounts/{id}',
+      methods: [apigwv2.HttpMethod.PATCH, apigwv2.HttpMethod.DELETE],
       integration: apiIntegration,
     });
     httpApi.addRoutes({
