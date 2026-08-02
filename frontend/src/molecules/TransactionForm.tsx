@@ -20,6 +20,12 @@ import { useCreateTransaction } from '@/hooks/useTransactions';
 export interface TransactionFormProps {
   apiBaseUrl: string;
   userId: string;
+  /**
+   * Optional callback fired after a successful create. The modal flow uses
+   * this to close the dialog, which unmounts the form and naturally resets
+   * all field state. Standalone form usage (page-bottom layout) can omit it.
+   */
+  onCreated?: () => void;
 }
 
 interface FormErrors {
@@ -42,7 +48,7 @@ function Asterism() {
   );
 }
 
-export function TransactionForm({ apiBaseUrl, userId }: TransactionFormProps) {
+export function TransactionForm({ apiBaseUrl, userId, onCreated }: TransactionFormProps) {
   const todayIso = new Date().toISOString().slice(0, 10);
   const [amount, setAmount] = useState('');
   const [merchant, setMerchant] = useState('');
@@ -79,8 +85,11 @@ export function TransactionForm({ apiBaseUrl, userId }: TransactionFormProps) {
         notes: notes.trim() ? notes.trim() : null,
       },
       {
+        onSuccess: () => {
+          onCreated?.();
+        },
         onError: (err) => {
-          setErrors({ form: err instanceof Error ? err.message : 'No se pudo crear la transacción.' });
+          setErrors({ form: err instanceof Error ? err.message : 'Could not create transaction.' });
         },
       },
     );
