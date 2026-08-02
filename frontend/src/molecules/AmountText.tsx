@@ -25,6 +25,35 @@ const SIGNAL_CLASSES: Record<Exclude<AmountSignal, undefined>, string> = {
   negativo: 'text-ink-negativo',
 };
 
+/**
+ * Currencies that should render with zero fractional digits in this app's
+ * editorial UX. Modern ICU/Intl auto-detects COP as 2-decimal because
+ * Colombia technically has a centavo subunit, but in practice retailers
+ * and the user-facing form never use it — the Litografía del Sur treatment
+ * expects "$ 12.000" not "$ 12.000,00" for COP. Same convention for CLP
+ * (Chilean peso), JPY, UYI, and the rest of the ISO 4217 zero-decimal set.
+ */
+const ZERO_DECIMAL_CURRENCIES = new Set<string>([
+  'BIF',
+  'CLP',
+  'DJF',
+  'GNF',
+  'ISK',
+  'JPY',
+  'KMF',
+  'KRW',
+  'PYG',
+  'RWF',
+  'UGX',
+  'UYI',
+  'VND',
+  'VUV',
+  'XAF',
+  'XOF',
+  'XPF',
+  'COP',
+]);
+
 function isMissingAmount(value: number | undefined | null): boolean {
   return value === undefined || value === null || Number.isNaN(value);
 }
@@ -56,11 +85,13 @@ export function AmountText({
     );
   }
   const valid = asValidCents(amountCents);
+  const useZeroDecimals = Boolean(currency) && ZERO_DECIMAL_CURRENCIES.has(currency!);
   const formatter = new Intl.NumberFormat(locale, {
     style: currency ? 'currency' : 'decimal',
     currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    ...(useZeroDecimals
+      ? { minimumFractionDigits: 0, maximumFractionDigits: 0 }
+      : {}),
   });
   const formatted = formatter.format(valid / 100);
   const colorClass = signal ? SIGNAL_CLASSES[signal] : 'text-ink-tinta';

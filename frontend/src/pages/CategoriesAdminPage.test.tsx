@@ -244,6 +244,24 @@ describe('CategoriesAdminPage — full CRUD with modals', () => {
 
     await waitFor(() => expect(screen.queryByText('Transporte')).not.toBeInTheDocument());
   });
+
+  // Issue 4 — mobile responsive. CategoryTable must be scrollable on
+  // narrow screens (4 cols: slug, name, color, actions). Wrapped in
+  // overflow-x-auto so long slugs do not blow the layout.
+  it('wraps the category table in an overflow-x-auto container for horizontal scroll on small screens', async () => {
+    wrap(<CategoriesAdminPage apiBaseUrl={BASE} />);
+    const table = await screen.findByTestId('category-table');
+    let parent = table.parentElement;
+    let hasOverflow = false;
+    while (parent) {
+      if (parent.className && /overflow-x-auto/.test(parent.className)) {
+        hasOverflow = true;
+        break;
+      }
+      parent = parent.parentElement;
+    }
+    expect(hasOverflow).toBe(true);
+  });
 });
 
 function within(dialog: HTMLElement) {

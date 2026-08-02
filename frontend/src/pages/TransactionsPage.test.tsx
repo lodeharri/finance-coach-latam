@@ -139,7 +139,7 @@ describe('TransactionsPage — modal create flow', () => {
     await user.click(screen.getByRole('button', { name: /\+ nueva transacción/i }));
 
     const dialog = await screen.findByRole('dialog');
-    await user.type(withinDialog(dialog).getByLabelText(/monto \(centavos\)/i), '420000');
+    await user.type(withinDialog(dialog).getByLabelText(/monto/i), '420000');
     await user.type(withinDialog(dialog).getByLabelText(/comercio/i), 'PedidosYa');
     await user.clear(withinDialog(dialog).getByLabelText(/fecha/i));
     await user.type(withinDialog(dialog).getByLabelText(/fecha/i), '2026-07-15');
@@ -184,7 +184,7 @@ describe('TransactionsPage — modal create flow', () => {
     // First create.
     await user.click(screen.getByRole('button', { name: /\+ nueva transacción/i }));
     let dialog = await screen.findByRole('dialog');
-    await user.type(withinDialog(dialog).getByLabelText(/monto \(centavos\)/i), '100');
+    await user.type(withinDialog(dialog).getByLabelText(/monto/i), '100');
     await user.type(withinDialog(dialog).getByLabelText(/comercio/i), 'Mercado');
     await waitFor(() => {
       const opts = Array.from(
@@ -200,7 +200,7 @@ describe('TransactionsPage — modal create flow', () => {
     await user.click(screen.getByRole('button', { name: /\+ nueva transacción/i }));
     dialog = await screen.findByRole('dialog');
     expect(
-      (withinDialog(dialog).getByLabelText(/monto \(centavos\)/i) as HTMLInputElement).value,
+      (withinDialog(dialog).getByLabelText(/monto/i) as HTMLInputElement).value,
     ).toBe('');
     expect((withinDialog(dialog).getByLabelText(/comercio/i) as HTMLInputElement).value).toBe('');
     expect((withinDialog(dialog).getByLabelText(/notas/i) as HTMLInputElement).value).toBe('');
@@ -211,5 +211,107 @@ describe('TransactionsPage — modal create flow', () => {
     // The old bottom-of-page section started with an asterism caption
     // "* * *  NUEVO MOVIMIENTO" before the form.
     expect(screen.queryByText(/\* \* \*.*NUEVO MOVIMIENTO/i)).not.toBeInTheDocument();
+  });
+
+  // Issue 4 — mobile responsive. The 7-column ledger table refuses to
+  // squeeze into a 375px viewport; the page must wrap it in an
+  // overflow-x-auto container so the user can scroll horizontally on
+  // touch devices without the table blowing out the layout.
+  it('wraps the transaction table in an overflow-x-auto container for horizontal scroll on small screens', async () => {
+    server.use(
+      http.get(`${BASE}/transactions`, () =>
+        HttpResponse.json([
+          {
+            id: 't1',
+            userId: 'u1',
+            accountId: 'acc-1',
+            merchant: 'PedidosYa',
+            amountCents: 12000,
+            occurredAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            status: 'CATEGORIZED',
+            notes: null,
+            categoryId: null,
+          },
+        ]),
+      ),
+      http.get(`${BASE}/categories`, () => HttpResponse.json([])),
+    );
+    wrap(<TransactionsPage apiBaseUrl={BASE} />);
+    const table = await screen.findByTestId('transaction-table');
+    // The table's parent chain must include an element with overflow-x-auto.
+    let parent = table.parentElement;
+    let hasOverflow = false;
+    while (parent) {
+      if (parent.className && /overflow-x-auto/.test(parent.className)) {
+        hasOverflow = true;
+        break;
+      }
+      parent = parent.parentElement;
+    }
+    expect(hasOverflow).toBe(true);
+  });
+});
+
+describe('TransactionsPage — mobile header layout', () => {
+  beforeEach(() => {
+    sessionStore.getState().setSession({
+      idToken: 'jwt',
+      refreshToken: 'r',
+      expiresAt: Date.now() + 600_000,
+      userId: 'u1',
+      email: 'a@b.com',
+      role: 'user',
+    });
+    server.resetHandlers();
+    server.use(
+      http.get(`${BASE}/accounts`, () =>
+        HttpResponse.json([
+          { id: 'acc-1', userId: 'u1', name: 'Checking', type: 'BANK', createdAt: new Date().toISOString() },
+        ]),
+      ),
+      http.get(`${BASE}/transactions`, () =>
+        HttpResponse.json([
+          {
+            id: 't1',
+            userId: 'u1',
+            accountId: 'acc-1',
+            merchant: 'X',
+            amountCents: 1000,
+            occurredAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            status: 'PENDING',
+            notes: null,
+            categoryId: null,
+          },
+        ]),
+      ),
+      http.get(`${BASE}/categories`, () => HttpResponse.json([])),
+    );
+  });
+
+  afterEach(() => {
+    sessionStore.getState().clear();
+    localStorage.clear();
+  });
+
+  it('the page header row allows wrapping so the row-count strip and CTA button never overflow the title on narrow screens', () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/transactions']}>
+          <TransactionsPage apiBaseUrl={BASE} />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    // The header's title-and-strip row must allow children to wrap below
+    // md so the page doesn't horizontally scroll on a 375px viewport.
+    const headerTitleRow = screen.getByTestId('transactions-page-header').querySelector(
+      'div.flex.items-baseline',
+    );
+    expect(headerTitleRow).not.toBeNull();
+    expect(headerTitleRow!.className).toMatch(/flex-wrap/);
   });
 });

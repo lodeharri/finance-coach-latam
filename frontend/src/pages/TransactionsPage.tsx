@@ -78,11 +78,11 @@ export function TransactionsPage({ apiBaseUrl }: TransactionsPageProps) {
         <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-tinta-mute">
           LIBRO DIARIO · 2026
         </span>
-        <div className="flex items-baseline justify-between gap-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-4">
           <h1 className="font-display text-2xl font-bold text-ink-tinta">
             {isAdminTarget ? `Transacciones de ${userId}` : 'Mis transacciones'}
           </h1>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3 md:gap-4">
             <span
               className="font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta-mute"
               data-testid="row-count"
@@ -106,14 +106,16 @@ export function TransactionsPage({ apiBaseUrl }: TransactionsPageProps) {
       >
         Mostrando {startIndex}–{endIndex} · PÁGINA {currentPage} de {totalPages}
       </p>
-      <TransactionTable
-        apiBaseUrl={apiBaseUrl}
-        rows={rows}
-        categories={cats}
-        isLoading={transactions.isPending}
-        onOverride={(transactionId, categoryId) => updateTx.mutate({ transactionId, categoryId })}
-        onRecategorize={(transactionId) => recategorize.mutate({ transactionId })}
-      />
+      <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">
+        <TransactionTable
+          apiBaseUrl={apiBaseUrl}
+          rows={rows}
+          categories={cats}
+          isLoading={transactions.isPending}
+          onOverride={(transactionId, categoryId) => updateTx.mutate({ transactionId, categoryId })}
+          onRecategorize={(transactionId) => recategorize.mutate({ transactionId })}
+        />
+      </div>
       <Pagination
         currentPage={currentPage}
         totalPages={totalPages}

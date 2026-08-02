@@ -60,7 +60,8 @@ export function CategoryTable({ apiBaseUrl, onEdit, onDeleteRequest }: CategoryT
   }
 
   return (
-    <table className="w-full border-collapse" data-testid="category-table">
+    <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">
+      <table className="w-full border-collapse" data-testid="category-table">
       <thead>
         <tr>
           <th className="border-b border-ink-paper-press py-2 text-left font-mono text-xs uppercase tracking-wide text-ink-tinta-soft">
@@ -144,6 +145,7 @@ export function CategoryTable({ apiBaseUrl, onEdit, onDeleteRequest }: CategoryT
           );
         })}
       </tbody>
-    </table>
+      </table>
+    </div>
   );
 }

@@ -63,9 +63,13 @@ export function TransactionForm({ apiBaseUrl, userId, onCreated }: TransactionFo
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const next: FormErrors = {};
-    const cents = Number(amount);
-    if (!amount || !Number.isInteger(cents) || cents <= 0) {
-      next.amount = 'El monto debe ser un entero positivo (centavos).';
+    // The amount field accepts whole pesos in the natural unit the user
+    // thinks in (e.g. "12000" → $ 12.000 COP). Backend stores integer cents,
+    // so convert ×100 and round to absorb any decimal entered in error.
+    const pesos = Number(amount);
+    const cents = Math.round(pesos * 100);
+    if (!amount || !Number.isFinite(pesos) || !Number.isInteger(pesos) || pesos <= 0) {
+      next.amount = 'El monto debe ser un entero positivo (pesos).';
     }
     if (!merchant.trim()) next.merchant = 'El comercio es obligatorio.';
     if (!occurredAt) next.occurredAt = 'La fecha es obligatoria.';
@@ -151,13 +155,14 @@ export function TransactionForm({ apiBaseUrl, userId, onCreated }: TransactionFo
           htmlFor="tx-amount"
           className="block font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta-soft"
         >
-          Monto (centavos)
+          Monto
         </label>
         <AmountInput
           id="tx-amount"
           value={amount}
           onValueChange={setAmount}
           invalid={Boolean(errors.amount)}
+          placeholder="12000"
           {...(errors.amount ? { describedById: 'tx-amount-error' } : {})}
         />
         {errors.amount ? (

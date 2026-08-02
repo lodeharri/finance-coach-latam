@@ -111,7 +111,7 @@ export function DashboardPage({ apiBaseUrl }: DashboardPageProps) {
         <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-tinta-mute">
           TABLERO · {kickerMonth}
         </span>
-        <div className="flex items-baseline justify-between gap-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-4">
           <h1 className="font-display text-2xl font-bold text-ink-tinta">Tu mes, en cifras</h1>
           <span className="font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta-mute">
             {totalCategories} {totalCategories === 1 ? 'categoría configurada' : 'categorías configuradas'}
@@ -119,7 +119,7 @@ export function DashboardPage({ apiBaseUrl }: DashboardPageProps) {
         </div>
       </header>
 
-      <div className="grid grid-cols-12 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           label="Gasto del mes"
           amountCents={stats.mtdSpendCents}
