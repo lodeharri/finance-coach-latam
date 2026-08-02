@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { HexStamp } from '@/atoms/HexStamp';
 import { LogoutButton } from '@/atoms/LogoutButton';
@@ -50,6 +50,7 @@ export function AppShell({ pageName, role, children }: AppShellProps) {
   const currentRole = role ?? sessionStore.getState().role ?? null;
   const resolvedPageName = pageName ?? derivePageName(location.pathname);
   const folio = folioFor(location.pathname);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <div
@@ -67,6 +68,17 @@ export function AppShell({ pageName, role, children }: AppShellProps) {
         style={{ minHeight: '64px' }}
       >
         <div className="flex items-baseline gap-4">
+          <button
+            type="button"
+            data-testid="mobile-sidebar-toggle"
+            aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-sidebar-drawer"
+            onClick={() => setMobileOpen((v) => !v)}
+            className="md:hidden rounded-sm p-1 font-mono text-lg leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-paper"
+          >
+            ☰
+          </button>
           <HexStamp size="md" />
           <span
             data-testid="app-shell-folio"
@@ -94,7 +106,13 @@ export function AppShell({ pageName, role, children }: AppShellProps) {
         </div>
       </header>
       <div className="flex min-h-[calc(100vh-64px)]">
-        <Sidebar currentRole={currentRole} activePath={location.pathname} onNavigate={navigate} />
+        <Sidebar
+          currentRole={currentRole}
+          activePath={location.pathname}
+          onNavigate={navigate}
+          mobileOpen={mobileOpen}
+          onMobileClose={() => setMobileOpen(false)}
+        />
         <main
           data-testid="app-shell-main"
           className="min-w-0 flex-1 px-12 py-10 md:pr-20"

@@ -58,4 +58,94 @@ describe('Sidebar', () => {
     render(<Sidebar currentRole="user" activePath="/dashboard" />);
     expect(screen.getByRole('navigation')).toBeInTheDocument();
   });
+
+  // Mobile drawer (REQ-FF-MOBILE-SIDEBAR)
+  describe('mobile drawer', () => {
+    it('does NOT render a drawer when mobileOpen is false', () => {
+      render(
+        <Sidebar
+          currentRole="user"
+          activePath="/dashboard"
+          mobileOpen={false}
+          onMobileClose={vi.fn()}
+        />,
+      );
+      expect(screen.queryByTestId('mobile-sidebar-drawer')).not.toBeInTheDocument();
+    });
+
+    it('renders a drawer with the same nav links when mobileOpen is true', () => {
+      render(
+        <Sidebar
+          currentRole="admin"
+          activePath="/dashboard"
+          mobileOpen
+          onMobileClose={vi.fn()}
+        />,
+      );
+      const drawer = screen.getByTestId('mobile-sidebar-drawer');
+      expect(drawer).toBeInTheDocument();
+      // All four user links + both admin links are present inside the drawer.
+      expect(within(drawer).getByRole('link', { name: /tablero/i })).toBeInTheDocument();
+      expect(within(drawer).getByRole('link', { name: /transacciones/i })).toBeInTheDocument();
+      expect(within(drawer).getByRole('link', { name: /categorías/i })).toBeInTheDocument();
+      expect(within(drawer).getByRole('link', { name: /usuarios/i })).toBeInTheDocument();
+    });
+
+    it('clicking the drawer backdrop calls onMobileClose', () => {
+      const onMobileClose = vi.fn();
+      render(
+        <Sidebar
+          currentRole="user"
+          activePath="/dashboard"
+          mobileOpen
+          onMobileClose={onMobileClose}
+        />,
+      );
+      fireEvent.click(screen.getByTestId('mobile-sidebar-backdrop'));
+      expect(onMobileClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('pressing Escape calls onMobileClose while the drawer is open', () => {
+      const onMobileClose = vi.fn();
+      render(
+        <Sidebar
+          currentRole="user"
+          activePath="/dashboard"
+          mobileOpen
+          onMobileClose={onMobileClose}
+        />,
+      );
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(onMobileClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('clicking a nav link inside the drawer calls onNavigate AND onMobileClose', () => {
+      const onNavigate = vi.fn();
+      const onMobileClose = vi.fn();
+      render(
+        <Sidebar
+          currentRole="admin"
+          activePath="/dashboard"
+          mobileOpen
+          onMobileClose={onMobileClose}
+          onNavigate={onNavigate}
+        />,
+      );
+      const drawer = screen.getByTestId('mobile-sidebar-drawer');
+      fireEvent.click(within(drawer).getByRole('link', { name: /transacciones/i }));
+      expect(onNavigate).toHaveBeenCalledWith('/transactions');
+      expect(onMobileClose).toHaveBeenCalledTimes(1);
+    });
+  });
 });
+
+function within(container: HTMLElement) {
+  return {
+    getByRole: (role: 'link' | 'button', options?: { name?: RegExp }) => {
+      const all = screen.getAllByRole(role, options);
+      const inContainer = all.find((el) => container.contains(el));
+      if (!inContainer) throw new Error(`No ${role} inside the container`);
+      return inContainer;
+    },
+  };
+}
