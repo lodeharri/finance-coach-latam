@@ -17,9 +17,15 @@ const TIERS: UserTier[] = ['BRONZE', 'SILVER', 'GOLD'];
 
 export interface UserFormProps {
   apiBaseUrl: string;
+  /**
+   * Optional callback fired after a successful create. The modal flow uses
+   * this to close the dialog, which unmounts the form and naturally resets
+   * all field state for the next entry.
+   */
+  onCreated?: () => void;
 }
 
-export function UserForm({ apiBaseUrl }: UserFormProps) {
+export function UserForm({ apiBaseUrl, onCreated }: UserFormProps) {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [tier, setTier] = useState<UserTier>('BRONZE');
@@ -39,6 +45,7 @@ export function UserForm({ apiBaseUrl }: UserFormProps) {
     create.mutate(
       { email: email.trim(), name: name.trim(), tier },
       {
+        onSuccess: () => onCreated?.(),
         onError: (err) => {
           setErrors({ form: err instanceof Error ? err.message : 'No se pudo crear el usuario.' });
         },
