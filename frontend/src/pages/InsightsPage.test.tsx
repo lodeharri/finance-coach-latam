@@ -210,4 +210,45 @@ describe('InsightsPage — totals parity with Dashboard (REL-001)', () => {
     expect(style).toMatch(/width:\s*100%/);
     expect(style).toMatch(/height:\s*280/);
   });
+
+  // Issue 4 — mobile responsive. The breakdown table sorts on Total/Δ%/Δabs
+  // /Cantidad and would blow out a 375px viewport without a horizontal
+  // scroll wrapper. Pin the contract so the regression cannot ship.
+  it('breakdown table is wrapped in an overflow-x-auto container for horizontal scroll on small screens', async () => {
+    const realNow = new Date();
+    const occ = new Date(realNow.getFullYear(), realNow.getMonth(), 5, 12, 0, 0).toISOString();
+    server.use(
+      http.get(`${BASE}/transactions`, () =>
+        HttpResponse.json([
+          tx({ id: 'a', amountCents: 100000, status: 'CATEGORIZED', occurredAt: occ }),
+        ]),
+      ),
+      http.get(`${BASE}/categories`, () =>
+        HttpResponse.json([
+          {
+            id: 'c1',
+            userId: null,
+            slug: 'food',
+            name: 'Food',
+            color: '#1f3fb8',
+            createdAt: new Date().toISOString(),
+          },
+        ]),
+      ),
+    );
+
+    wrap(<InsightsPage apiBaseUrl={BASE} />);
+
+    const table = await screen.findByTestId('breakdown-table');
+    let parent = table.parentElement;
+    let hasOverflow = false;
+    while (parent) {
+      if (parent.className && /overflow-x-auto/.test(parent.className)) {
+        hasOverflow = true;
+        break;
+      }
+      parent = parent.parentElement;
+    }
+    expect(hasOverflow).toBe(true);
+  });
 });

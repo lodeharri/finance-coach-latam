@@ -59,6 +59,33 @@ describe('AppShell mobile sidebar', () => {
     );
     expect(screen.queryByTestId('mobile-sidebar-drawer')).not.toBeInTheDocument();
   });
+
+  // Issue 4 — mobile responsive fixes. Pinned by test so a regression
+  // (e.g. hardcoded px-12 padding) cannot ship and wreck the 375px layout.
+  it('main content area uses reduced horizontal padding on mobile', () => {
+    renderShell();
+    const main = screen.getByTestId('app-shell-main');
+    // Mobile-first: px-4 (16px) instead of px-12 (48px). On desktop we
+    // restore the editorial breathing room via md:px-12 / md:pr-20.
+    expect(main.className).toMatch(/px-4/);
+    expect(main.className).toMatch(/md:px-12/);
+  });
+
+  it('masthead uses compact horizontal padding on mobile so the header fits a 375px viewport', () => {
+    renderShell();
+    const masthead = screen.getByTestId('app-shell-masthead');
+    // Compact on mobile, editorial breathing room on md+.
+    expect(masthead.className).toMatch(/px-4/);
+    expect(masthead.className).toMatch(/md:px-12/);
+  });
+
+  it('masthead allows children to wrap on narrow viewports so role/date/logout never overflow the title', () => {
+    renderShell();
+    const masthead = screen.getByTestId('app-shell-masthead');
+    // flex-wrap lets the date / RoleBadge / LogoutButton wrap to a second
+    // row when there is no horizontal room.
+    expect(masthead.className).toMatch(/flex-wrap/);
+  });
 });
 
 function withinDrawer(drawer: HTMLElement) {

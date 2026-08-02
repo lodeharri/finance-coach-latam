@@ -109,4 +109,29 @@ describe('DashboardPage', () => {
     await waitFor(() => expect(screen.getByTestId('sparkline-caption')).toBeInTheDocument());
     expect(screen.getByTestId('sparkline-caption').textContent).toMatch(/MESES/);
   });
+
+  // Issue 4 — mobile responsive. Stats cards must stack on mobile so the
+  // hero MTD number does not steal three columns of a 12-col grid at 375px.
+  // Pin the contract: stats grid uses grid-cols-1 on mobile, scales up at sm
+  // and lg. Without this, the hero "Gasto del mes" number becomes unreadable
+  // on a phone.
+  it('stats grid stacks on mobile (grid-cols-1) and scales on tablet/desktop', () => {
+    wrap(<DashboardPage apiBaseUrl={BASE} />);
+    const statsGrid = screen.getByTestId('dashboard-page-header').parentElement!.querySelector(
+      'div.grid',
+    );
+    expect(statsGrid).not.toBeNull();
+    expect(statsGrid!.className).toMatch(/grid-cols-1/);
+    expect(statsGrid!.className).toMatch(/sm:grid-cols-2/);
+    expect(statsGrid!.className).toMatch(/lg:grid-cols-4/);
+  });
+
+  it('page title row allows children to wrap so the categories-strip and title never overflow on small screens', () => {
+    wrap(<DashboardPage apiBaseUrl={BASE} />);
+    const row = screen.getByTestId('dashboard-page-header').querySelector(
+      'div.flex.items-baseline.justify-between',
+    );
+    expect(row).not.toBeNull();
+    expect(row!.className).toMatch(/flex-wrap/);
+  });
 });

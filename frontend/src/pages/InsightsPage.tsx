@@ -258,6 +258,7 @@ export function InsightsPage({ apiBaseUrl }: InsightsPageProps) {
               </span>
               <h2 className="font-display text-lg font-bold text-ink-tinta">Desglose por categoría</h2>
             </header>
+            <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">
             <table className="w-full border-collapse font-body text-md" data-testid="breakdown-table">
               <thead>
                 <tr className="border-b-2 border-ink-tinta text-left">
@@ -360,6 +361,7 @@ export function InsightsPage({ apiBaseUrl }: InsightsPageProps) {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
           <div>

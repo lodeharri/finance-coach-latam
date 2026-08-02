@@ -44,11 +44,11 @@ export function AccountsPage({ apiBaseUrl }: AccountsPageProps) {
         <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-tinta-mute">
           RELACIÓN DE CUENTAS · 2026
         </span>
-        <div className="flex items-baseline justify-between gap-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-4">
           <h1 className="font-display text-2xl font-bold text-ink-tinta">
             {isAdminTarget ? `Cuentas de ${userId}` : 'Mis cuentas'}
           </h1>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3 md:gap-4">
             <span
               className="font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta-mute"
               data-testid="row-count"
@@ -66,7 +66,8 @@ export function AccountsPage({ apiBaseUrl }: AccountsPageProps) {
           </div>
         </div>
       </header>
-      <table className="w-full border-collapse font-body text-md" data-testid="accounts-table">
+      <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">
+        <table className="w-full border-collapse font-body text-md" data-testid="accounts-table">
         <thead>
           <tr className="border-b-2 border-ink-tinta text-left">
             <th scope="col" className="py-2 pr-4 font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta">
@@ -104,6 +105,7 @@ export function AccountsPage({ apiBaseUrl }: AccountsPageProps) {
           ))}
         </tbody>
       </table>
+      </div>
       {rows.length === 0 ? (
         <section
           className="rounded-sm border border-dashed border-ink-paper-press bg-ink-paper-lift p-6"

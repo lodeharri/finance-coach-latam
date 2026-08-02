@@ -161,4 +161,24 @@ describe('AccountsPage — modal create flow', () => {
     // appear now.
     expect(screen.queryByText(/\* \* \*.*NUEVA CUENTA/i)).not.toBeInTheDocument();
   });
+
+  // Issue 4 — mobile responsive. The accounts table is 3 columns wide but
+  // the N.º column has a fixed width (≥80px) and the type pill another
+  // ~64px. On a 375px viewport with main padding (px-12) that crowds the
+  // account name column. Wrap the table in overflow-x-auto so users can
+  // pan horizontally if a name is long.
+  it('wraps the accounts table in an overflow-x-auto container for horizontal scroll on small screens', () => {
+    wrap(<AccountsPage apiBaseUrl={BASE} />);
+    const table = screen.getByTestId('accounts-table');
+    let parent = table.parentElement;
+    let hasOverflow = false;
+    while (parent) {
+      if (parent.className && /overflow-x-auto/.test(parent.className)) {
+        hasOverflow = true;
+        break;
+      }
+      parent = parent.parentElement;
+    }
+    expect(hasOverflow).toBe(true);
+  });
 });
