@@ -7,11 +7,15 @@
  * - Row count strip `N.º 03 · CUENTAS` in mono on the right of the header.
  *
  * Lists accounts for the current user (or admin-targeted userId via query
- * string).
+ * string). The create form is mounted inside a Modal opened from a header
+ * button; on success the form unmounts, which resets all field state for
+ * the next entry.
  */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { Button } from '@/atoms/Button';
 import { ForbiddenPage } from './ForbiddenPage';
+import { Modal } from '@/molecules/Modal';
 import { AccountForm } from '@/molecules/AccountForm';
 import { useAccounts } from '@/hooks/useAccounts';
 import { sessionStore } from '@/stores/sessionStore';
@@ -28,6 +32,7 @@ export function AccountsPage({ apiBaseUrl }: AccountsPageProps) {
   const isAdminTarget = Boolean(params.get('userId')) && role === 'admin';
   const accounts = useAccounts({ apiBaseUrl, userId: userId ?? undefined });
   const rows = useMemo(() => accounts.data ?? [], [accounts.data]);
+  const [createOpen, setCreateOpen] = useState(false);
 
   if (!userId) {
     return <ForbiddenPage />;
@@ -43,12 +48,22 @@ export function AccountsPage({ apiBaseUrl }: AccountsPageProps) {
           <h1 className="font-display text-2xl font-bold text-ink-tinta">
             {isAdminTarget ? `Cuentas de ${userId}` : 'Mis cuentas'}
           </h1>
-          <span
-            className="font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta-mute"
-            data-testid="row-count"
-          >
-            N.º {String(rows.length).padStart(3, '0')} · CUENTAS
-          </span>
+          <div className="flex items-center gap-4">
+            <span
+              className="font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta-mute"
+              data-testid="row-count"
+            >
+              N.º {String(rows.length).padStart(3, '0')} · CUENTAS
+            </span>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => setCreateOpen(true)}
+              data-testid="accounts-new-button"
+            >
+              + Nueva cuenta
+            </Button>
+          </div>
         </div>
       </header>
       <table className="w-full border-collapse font-body text-md" data-testid="accounts-table">
@@ -100,15 +115,13 @@ export function AccountsPage({ apiBaseUrl }: AccountsPageProps) {
           </p>
         </section>
       ) : null}
-      <section className="mt-2">
-        <header className="mb-4 flex items-baseline justify-between">
-          <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-tinta-mute">
-            * * *&nbsp;&nbsp;NUEVA CUENTA
-          </span>
-          <h2 className="font-display text-lg font-bold text-ink-tinta">Agregar cuenta</h2>
-        </header>
-        <AccountForm apiBaseUrl={apiBaseUrl} userId={userId} />
-      </section>
+      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Nueva cuenta">
+        <AccountForm
+          apiBaseUrl={apiBaseUrl}
+          userId={userId}
+          onCreated={() => setCreateOpen(false)}
+        />
+      </Modal>
     </section>
   );
 }

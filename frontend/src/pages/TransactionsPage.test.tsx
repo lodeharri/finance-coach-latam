@@ -208,6 +208,8 @@ describe('TransactionsPage — modal create flow', () => {
 
   it('the legacy "NUEVO MOVIMIENTO" bottom-of-page form section is removed', () => {
     wrap(<TransactionsPage apiBaseUrl={BASE} />);
-    expect(screen.queryByText(/NUEVO MOVIMIENTO/i)).not.toBeInTheDocument();
+    // The old bottom-of-page section started with an asterism caption
+    // "* * *  NUEVO MOVIMIENTO" before the form.
+    expect(screen.queryByText(/\* \* \*.*NUEVO MOVIMIENTO/i)).not.toBeInTheDocument();
   });
 });
