@@ -9,6 +9,12 @@
  *
  * Bug being prevented: Issue 1 in fix/delete-routes-form-pesos-mobile —
  * DELETE /users/{id} returning 404 while DELETE /categories/{id} works.
+ *
+ * Also pins per-route throttling limits on the API Gateway v2 stage.
+ * Free-tier cost protection: the default 10,000 RPS sustained throttle is
+ * too high for a portfolio demo — a DoS could cost real money. Per-route
+ * limits block obvious abuse while still letting a normal user do 5 req/sec
+ * for 5 seconds (25 req burst, well inside every limit here).
  */
 import { App } from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
@@ -24,6 +30,47 @@ interface RouteDefinition {
 interface RouteResource {
   readonly Properties: RouteDefinition;
 }
+
+interface RouteSettings {
+  readonly ThrottlingBurstLimit?: number;
+  readonly ThrottlingRateLimit?: number;
+}
+
+interface StageProperties {
+  readonly DefaultRouteSettings?: RouteSettings;
+  readonly RouteSettings?: Record<string, RouteSettings>;
+}
+
+interface StageResource {
+  readonly Properties: StageProperties;
+}
+
+/**
+ * Per-route throttle limits declared in `finance-coach-stack.ts`. These are
+ * the source of truth — the test asserts the synthesized CfnStage contains
+ * exactly these keys with exactly these values.
+ *
+ * Numbers chosen to be:
+ *   - safe for free-tier cost (block scrapers / DoS)
+ *   - high enough for normal human usage (browsing, paginating, bulk import)
+ *
+ * Reads are cheap; writes are expensive; admin / LLM-backed paths are tightest.
+ */
+const EXPECTED_ROUTE_THROTTLE: Record<string, RouteSettings> = {
+  'GET /transactions': { ThrottlingRateLimit: 100, ThrottlingBurstLimit: 50 },
+  'GET /accounts': { ThrottlingRateLimit: 50, ThrottlingBurstLimit: 20 },
+  'GET /categories': { ThrottlingRateLimit: 50, ThrottlingBurstLimit: 20 },
+  'GET /users': { ThrottlingRateLimit: 30, ThrottlingBurstLimit: 10 },
+  'POST /transactions': { ThrottlingRateLimit: 30, ThrottlingBurstLimit: 10 },
+  'POST /accounts': { ThrottlingRateLimit: 15, ThrottlingBurstLimit: 5 },
+  'POST /categories': { ThrottlingRateLimit: 15, ThrottlingBurstLimit: 5 },
+  'PATCH /transactions/{id}': { ThrottlingRateLimit: 30, ThrottlingBurstLimit: 10 },
+  'DELETE /categories/{id}': { ThrottlingRateLimit: 30, ThrottlingBurstLimit: 10 },
+  'DELETE /users/{id}': { ThrottlingRateLimit: 10, ThrottlingBurstLimit: 3 },
+  'PATCH /categories/{id}': { ThrottlingRateLimit: 30, ThrottlingBurstLimit: 10 },
+  'PATCH /accounts/{id}': { ThrottlingRateLimit: 15, ThrottlingBurstLimit: 5 },
+  'POST /transactions/{id}/categorize': { ThrottlingRateLimit: 10, ThrottlingBurstLimit: 3 },
+};
 
 describe('FinanceCoachStack API Gateway routes', () => {
   const app = new App();
@@ -74,5 +121,51 @@ describe('FinanceCoachStack API Gateway routes', () => {
   it('still wires /categories/{id} PATCH + DELETE so the prior contract is preserved', () => {
     const methods = methodsForPath('/categories/{id}');
     expect(methods).toEqual(expect.arrayContaining(['DELETE', 'PATCH']));
+  });
+});
+
+describe('FinanceCoachStack API Gateway per-route throttling', () => {
+  const app = new App();
+  const stack = new FinanceCoachStack(app, 'TestStackThrottle');
+  const template = Template.fromStack(stack);
+  const stageResources = template.findResources('AWS::ApiGatewayV2::Stage') as Record<string, StageResource>;
+
+  /**
+   * The HTTP API v2 default stage is the only CfnStage the stack emits.
+   * Stage-level throttle overrides live in `RouteSettings` (per-route) and
+   * `DefaultRouteSettings` (fallback for any route without an entry).
+   */
+  function getDefaultStage(): StageResource {
+    const entries = Object.values(stageResources);
+    expect(entries).toHaveLength(1);
+    const stage = entries[0]!;
+    expect(stage.Properties.RouteSettings).toBeDefined();
+    return stage;
+  }
+
+  it('declares an explicit RouteSettings block on the CfnStage', () => {
+    const stage = getDefaultStage();
+    expect(stage.Properties.RouteSettings).toBeDefined();
+    expect(Object.keys(stage.Properties.RouteSettings!)).not.toHaveLength(0);
+  });
+
+  it.each(Object.entries(EXPECTED_ROUTE_THROTTLE))(
+    'applies throttle %i RPS / %i burst to route "%s"',
+    (routeKey, expected) => {
+      const stage = getDefaultStage();
+      const routeSettings = stage.Properties.RouteSettings!;
+      const actual = routeSettings[routeKey];
+      expect(actual, `route "${routeKey}" missing from RouteSettings`).toBeDefined();
+      expect(actual!.ThrottlingRateLimit).toBe(expected.ThrottlingRateLimit);
+      expect(actual!.ThrottlingBurstLimit).toBe(expected.ThrottlingBurstLimit);
+    },
+  );
+
+  it('does not declare any route in RouteSettings that is missing from the contract', () => {
+    const stage = getDefaultStage();
+    const declared = Object.keys(stage.Properties.RouteSettings!);
+    const expected = new Set(Object.keys(EXPECTED_ROUTE_THROTTLE));
+    const extra = declared.filter((k) => !expected.has(k));
+    expect(extra, `extra routes in RouteSettings not declared in test contract: ${extra.join(', ')}`).toEqual([]);
   });
 });
