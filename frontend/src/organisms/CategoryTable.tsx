@@ -1,9 +1,13 @@
 /**
  * CategoryTable organism — Litografía del Sur.
  *
- * Lists categories via useCategories. Each row is a CategoryPill + Delete button.
- * Optimistic delete with 409-restore (REQ-FF-CATEGORIES-CRUD). Conflict surfaces
- * as an inline message per row, not a toast.
+ * Lists categories via useCategories. Each row exposes Edit + Delete actions
+ * that delegate to the parent (so the page can open its own modals). When no
+ * `onEdit` callback is supplied, the Edit button is hidden (graceful
+ * degradation for callers that haven't wired the edit flow yet).
+ *
+ * Optimistic delete with 409-restore (REQ-FF-CATEGORIES-CRUD). Conflict
+ * surfaces as an inline message per row, not a toast.
  *
  * Organisms orchestrate remote data through hooks; they have NO direct fetch calls.
  */
@@ -12,12 +16,17 @@ import { useCategories, useDeleteCategory } from '@/hooks/useCategories';
 import { CategoryPill } from '@/molecules/CategoryPill';
 import { Button } from '@/atoms/Button';
 import { Spinner } from '@/atoms/Spinner';
+import type { Category } from '@/services/types';
 
 export interface CategoryTableProps {
   apiBaseUrl: string;
+  /** Called when the user clicks Editar on a row. */
+  onEdit?: (category: Category) => void;
+  /** Called when the user clicks Eliminar on a row. */
+  onDeleteRequest?: (category: Category) => void;
 }
 
-export function CategoryTable({ apiBaseUrl }: CategoryTableProps) {
+export function CategoryTable({ apiBaseUrl, onEdit, onDeleteRequest }: CategoryTableProps) {
   const categories = useCategories({ apiBaseUrl });
   const remove = useDeleteCategory({ apiBaseUrl });
   const [conflictById, setConflictById] = useState<Record<string, string>>({});
@@ -25,9 +34,9 @@ export function CategoryTable({ apiBaseUrl }: CategoryTableProps) {
   if (categories.isPending) {
     return (
       <div className="flex items-center gap-3" data-testid="category-table-loading">
-        <Spinner aria-label="Cargando categorías" />
+        <Spinner aria-label="Loading categories" />
         <span className="font-mono text-xs uppercase tracking-wide text-ink-tinta-soft">
-          N.º cargando
+          N.º loading
         </span>
       </div>
     );
@@ -36,7 +45,7 @@ export function CategoryTable({ apiBaseUrl }: CategoryTableProps) {
   if (categories.isError) {
     return (
       <p className="font-body text-sm text-ink-negativo" role="alert">
-        Error al cargar categorías: {categories.error?.message ?? 'error desconocido'}
+        Failed to load categories: {categories.error?.message ?? 'unknown error'}
       </p>
     );
   }
@@ -45,7 +54,7 @@ export function CategoryTable({ apiBaseUrl }: CategoryTableProps) {
   if (list.length === 0) {
     return (
       <p className="font-body text-sm text-ink-tinta-soft" data-testid="empty-state">
-        Aún no hay categorías. Crea una para empezar.
+        Aún no hay categorías. Crea la primera para empezar.
       </p>
     );
   }
@@ -79,24 +88,48 @@ export function CategoryTable({ apiBaseUrl }: CategoryTableProps) {
               </td>
               <td className="py-2 pr-4 font-mono text-xs text-ink-tinta-soft">{c.color}</td>
               <td className="py-2 text-right">
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => {
-                    setConflictById((m) => {
-                      const { [c.id]: _drop, ...rest } = m;
-                      return rest;
-                    });
-                    remove.mutate(c.id, {
-                      onError: (err) => {
-                        setConflictById((m) => ({ ...m, [c.id]: err.message }));
-                      },
-                    });
-                  }}
-                  disabled={remove.isPending}
-                >
-                  Eliminar
-                </Button>
+                <div className="flex justify-end gap-2">
+                  {onEdit ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => onEdit(c)}
+                      data-testid={`category-edit-${c.id}`}
+                    >
+                      Editar
+                    </Button>
+                  ) : null}
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      if (onDeleteRequest) {
+                        // Defer to the parent — it owns the confirmation
+                        // modal. The parent calls `useDeleteCategory`
+                        // directly when the user confirms.
+                        setConflictById((m) => {
+                          const { [c.id]: _drop, ...rest } = m;
+                          return rest;
+                        });
+                        onDeleteRequest(c);
+                        return;
+                      }
+                      setConflictById((m) => {
+                        const { [c.id]: _drop, ...rest } = m;
+                        return rest;
+                      });
+                      remove.mutate(c.id, {
+                        onError: (err) => {
+                          setConflictById((m) => ({ ...m, [c.id]: err.message }));
+                        },
+                      });
+                    }}
+                    disabled={remove.isPending}
+                    data-testid={`category-delete-${c.id}`}
+                  >
+                    Eliminar
+                  </Button>
+                </div>
                 {conflict ? (
                   <p
                     role="alert"
