@@ -8,7 +8,7 @@
  * removed.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor, userEvent } from '@/test/test-utils';
+import { render, screen, waitFor, userEvent, act } from '@/test/test-utils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { MemoryRouter } from 'react-router-dom';
@@ -17,6 +17,7 @@ import { TransactionsPage } from './TransactionsPage';
 import { sessionStore } from '@/stores/sessionStore';
 import { toastStore } from '@/hooks/useToast';
 import type * as UseTransactionsModule from '@/hooks/useTransactions';
+import type { Transaction } from '@/services/types';
 
 const BASE = 'https://api.example.test';
 
@@ -436,6 +437,182 @@ describe('TransactionsPage — per-tx polling error/timeout handling', () => {
           }),
         ]),
       );
+    });
+  });
+
+  describe('per-tx polling list cache update', () => {
+    const pendingTransaction: Transaction = {
+      id: 't-target',
+      userId: 'u1',
+      accountId: 'acc-1',
+      merchant: 'Pending Merchant',
+      amountCents: 420000,
+      occurredAt: '2026-07-15T00:00:00.000Z',
+      createdAt: '2026-07-15T00:00:00.000Z',
+      status: 'PENDING',
+      notes: null,
+      categoryId: null,
+    };
+
+    const unrelatedTransaction: Transaction = {
+      ...pendingTransaction,
+      id: 't-unrelated',
+      merchant: 'Unrelated Merchant',
+    };
+
+    function renderPollingPage(client: QueryClient) {
+      return render(
+        <QueryClientProvider client={client}>
+          <MemoryRouter initialEntries={['/transactions']}>
+            <TransactionsPage apiBaseUrl={BASE} />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      );
+    }
+
+    async function startTracking(client: QueryClient) {
+      const mutation = client.getMutationCache().build(client, {
+        mutationFn: async (variables: Record<string, unknown>) => {
+          void variables;
+          return pendingTransaction;
+        },
+      });
+      await act(async () => {
+        await mutation.execute({
+          merchant: pendingTransaction.merchant,
+          accountId: pendingTransaction.accountId,
+          amountCents: pendingTransaction.amountCents,
+          occurredAt: pendingTransaction.occurredAt,
+        });
+        await Promise.resolve();
+      });
+      await waitFor(() => {
+        expect(useCategorizationStatusMock).toHaveBeenLastCalledWith(pendingTransaction.id);
+      });
+    }
+
+    async function rerenderPollingPage(
+      rerender: ReturnType<typeof render>['rerender'],
+      client: QueryClient,
+    ) {
+      await act(async () => {
+        rerender(
+          <QueryClientProvider client={client}>
+            <MemoryRouter initialEntries={['/transactions']}>
+              <TransactionsPage apiBaseUrl={BASE} />
+            </MemoryRouter>
+          </QueryClientProvider>,
+        );
+        await Promise.resolve();
+      });
+    }
+
+    beforeEach(() => {
+      server.use(
+        http.get(`${BASE}/transactions`, () => HttpResponse.json([pendingTransaction])),
+        http.get(`${BASE}/categories`, () =>
+          HttpResponse.json([
+            { id: 'cat-food', slug: 'food', name: 'Food', color: '#AABBCC' },
+          ]),
+        ),
+      );
+    });
+
+    it('optimistically replaces the row in the list when polled tx becomes CATEGORIZED', async () => {
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+      });
+      const view = renderPollingPage(client);
+      const row = await screen.findByTestId(`tx-row-${pendingTransaction.id}`);
+      expect(row).toHaveTextContent('PENDIENTE');
+
+      await startTracking(client);
+      const categorizedTransaction: Transaction = {
+        ...pendingTransaction,
+        status: 'CATEGORIZED',
+        categoryId: 'cat-food',
+      };
+      mockCategorization.data = categorizedTransaction;
+      await rerenderPollingPage(view.rerender, client);
+
+      await waitFor(() => {
+        expect(screen.getByTestId(`tx-row-${pendingTransaction.id}`)).toHaveTextContent('Food');
+        expect(screen.getByTestId(`tx-row-${pendingTransaction.id}`)).toHaveTextContent('CATEGORIZADO');
+      });
+    });
+
+    it('optimistically replaces the row in the list when polled tx becomes FAILED', async () => {
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+      });
+      const view = renderPollingPage(client);
+      await screen.findByTestId(`tx-row-${pendingTransaction.id}`);
+
+      await startTracking(client);
+      const failedTransaction: Transaction = {
+        ...pendingTransaction,
+        merchant: 'Failed Merchant',
+        status: 'FAILED',
+      };
+      mockCategorization.data = failedTransaction;
+      await rerenderPollingPage(view.rerender, client);
+
+      await waitFor(() => {
+        const row = screen.getByTestId(`tx-row-${pendingTransaction.id}`);
+        expect(row).toHaveTextContent('Failed Merchant');
+        expect(row).toHaveTextContent('FALLIDO');
+      });
+      expect(
+        client.getQueryData<Transaction[]>(['transactions', 'u1', 25, 0]),
+      ).toEqual([failedTransaction]);
+    });
+
+    it('updates ALL cached list query variants (different limits/offsets)', async () => {
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+      });
+      const firstKey = ['transactions', 'u1', 10, 0] as const;
+      const secondKey = ['transactions', 'u1', 50, 50] as const;
+      client.setQueryData<Transaction[]>(firstKey, [pendingTransaction]);
+      client.setQueryData<Transaction[]>(secondKey, [pendingTransaction]);
+      const view = renderPollingPage(client);
+      await screen.findByTestId(`tx-row-${pendingTransaction.id}`);
+
+      await startTracking(client);
+      const categorizedTransaction: Transaction = {
+        ...pendingTransaction,
+        status: 'CATEGORIZED',
+        categoryId: 'cat-food',
+      };
+      mockCategorization.data = categorizedTransaction;
+      await rerenderPollingPage(view.rerender, client);
+
+      await waitFor(() => {
+        expect(client.getQueryData<Transaction[]>(firstKey)).toEqual([categorizedTransaction]);
+        expect(client.getQueryData<Transaction[]>(secondKey)).toEqual([categorizedTransaction]);
+      });
+    });
+
+    it('does NOT touch list cache for unrelated transaction ids', async () => {
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+      });
+      const unrelatedKey = ['transactions', 'u1', 10, 10] as const;
+      client.setQueryData<Transaction[]>(unrelatedKey, [unrelatedTransaction]);
+      const view = renderPollingPage(client);
+      await screen.findByTestId(`tx-row-${pendingTransaction.id}`);
+
+      await startTracking(client);
+      mockCategorization.data = {
+        ...pendingTransaction,
+        status: 'CATEGORIZED',
+        categoryId: 'cat-food',
+      };
+      await rerenderPollingPage(view.rerender, client);
+
+      await waitFor(() => {
+        expect(client.getQueryData<Transaction[]>(unrelatedKey)?.[0]).toBe(unrelatedTransaction);
+      });
     });
   });
 });

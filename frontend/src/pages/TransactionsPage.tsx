@@ -102,14 +102,24 @@ export function TransactionsPage({ apiBaseUrl }: TransactionsPageProps) {
     if (data && data.status === 'CATEGORIZED') {
       showToast({ variant: 'success', message: `Transacción categorizada: ${data.merchant}` });
       setTrackingId(null);
+      // Optimistic list cache update — replace the stale row with the polled data
+      queryClient.setQueriesData<Transaction[]>(
+        { queryKey: ['transactions'] },
+        (old) => old?.map((row) => (row.id === data.id ? data : row)),
+      );
     } else if (data && data.status === 'FAILED') {
       showToast({
         variant: 'error',
         message: `No se pudo categorizar ${data.merchant}. Intenta recategorizarla manualmente.`,
       });
       setTrackingId(null);
+      // Optimistic list cache update — replace the stale row with the polled data
+      queryClient.setQueriesData<Transaction[]>(
+        { queryKey: ['transactions'] },
+        (old) => old?.map((row) => (row.id === data.id ? data : row)),
+      );
     }
-  }, [categorization.data, showToast]);
+  }, [categorization.data, queryClient, showToast]);
 
   useEffect(() => {
     if (categorization.isTimeout) {
