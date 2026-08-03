@@ -71,7 +71,7 @@ jobs:
 
       - name: Smoke test (health + endpoint presence)
         env:
-          API_URL: ${{ steps.cdk.outputs.FinanceCoachApiUrl }}
+          API_URL: $(jq -r '.FinanceCoachStack.FinanceCoachApiUrl' /tmp/cdk-outputs.json)
         run: |
           echo "Health check..."
           HTTP=$(curl -s -o /tmp/health.json -w "%{http_code}" "$API_URL/health")
@@ -92,8 +92,10 @@ jobs:
           echo "✓ /categories requires auth"
 
       - name: Summary
+        env:
+          API_URL: $(jq -r '.FinanceCoachStack.FinanceCoachApiUrl' /tmp/cdk-outputs.json)
         run: |
           echo "## Deploy summary" >> $GITHUB_STEP_SUMMARY
-          echo "- API URL: \`${{ steps.cdk.outputs.FinanceCoachApiUrl }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- API URL: \`$API_URL\`" >> $GITHUB_STEP_SUMMARY
           echo "- Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- Triggered by: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
