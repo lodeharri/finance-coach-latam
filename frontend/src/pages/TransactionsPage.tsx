@@ -16,8 +16,15 @@
  * The create form is mounted inside a modal opened from a header button.
  * Closing the modal on success unmounts the form and naturally resets all
  * field state for the next entry.
+ *
+ * Per-transaction polling: when the create mutation resolves with a
+ * PENDING row, we capture the new id in `trackingId` so the page can poll
+ * the row until the categorizer worker writes a terminal status. The
+ * hook self-arms a 90s timeout and surfaces any fetch error so the page
+ * can show a recovery toast.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/atoms/Button';
 import { ForbiddenPage } from './ForbiddenPage';
@@ -25,9 +32,11 @@ import { Modal } from '@/molecules/Modal';
 import { TransactionForm } from '@/molecules/TransactionForm';
 import { TransactionTable } from '@/organisms/TransactionTable';
 import { Pagination } from '@/molecules/Pagination';
-import { useTransactions, useUpdateTransaction, useRecategorizeTransaction } from '@/hooks/useTransactions';
+import { useTransactions, useUpdateTransaction, useRecategorizeTransaction, useCategorizationStatus } from '@/hooks/useTransactions';
 import { useCategories } from '@/hooks/useCategories';
 import { sessionStore } from '@/stores/sessionStore';
+import { useToast } from '@/hooks/useToast';
+import type { Transaction } from '@/services/types';
 
 export const PAGE_SIZE = 25;
 
@@ -44,6 +53,7 @@ export function TransactionsPage({ apiBaseUrl }: TransactionsPageProps) {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [createOpen, setCreateOpen] = useState(false);
+  const [trackingId, setTrackingId] = useState<string | null>(null);
   const offset = (currentPage - 1) * PAGE_SIZE;
 
   const transactions = useTransactions({
@@ -55,6 +65,72 @@ export function TransactionsPage({ apiBaseUrl }: TransactionsPageProps) {
   const categories = useCategories({ apiBaseUrl });
   const updateTx = useUpdateTransaction({ apiBaseUrl });
   const recategorize = useRecategorizeTransaction({ apiBaseUrl });
+  const queryClient = useQueryClient();
+  const { show: showToast } = useToast();
+  const categorization = useCategorizationStatus(trackingId);
+
+  // Listen for create-mutation success events and capture the new
+  // transaction id so the polling hook starts tracking it. Only fires
+  // for PENDING rows (terminal statuses don't need polling).
+  useEffect(() => {
+    return queryClient.getMutationCache().subscribe((event) => {
+      if (event.type !== 'updated' || event.action.type !== 'success') return;
+      const data = event.mutation.state.data as Transaction | undefined;
+      const variables = event.mutation.state.variables;
+      if (
+        !data ||
+        data.status !== 'PENDING' ||
+        !variables ||
+        typeof variables !== 'object' ||
+        !('merchant' in variables) ||
+        !('accountId' in variables) ||
+        !('amountCents' in variables) ||
+        !('occurredAt' in variables)
+      ) {
+        return;
+      }
+      setTrackingId(data.id);
+    });
+  }, [queryClient]);
+
+  // React to polling state changes. CATEGORIZED → success toast and stop
+  // tracking. FAILED → error toast (no auto-retry) and stop tracking.
+  // Timeout → "slow categorizer" toast, stop tracking so the user can
+  // click Recategorize. Network/404 error → toast with the error message.
+  useEffect(() => {
+    const data = categorization.data;
+    if (data && data.status === 'CATEGORIZED') {
+      showToast({ variant: 'success', message: `Transacción categorizada: ${data.merchant}` });
+      setTrackingId(null);
+    } else if (data && data.status === 'FAILED') {
+      showToast({
+        variant: 'error',
+        message: `No se pudo categorizar ${data.merchant}. Intenta recategorizarla manualmente.`,
+      });
+      setTrackingId(null);
+    }
+  }, [categorization.data, showToast]);
+
+  useEffect(() => {
+    if (categorization.isTimeout) {
+      showToast({
+        variant: 'error',
+        message: 'La categorización está tardando más de lo normal. Probá recategorizar manualmente.',
+      });
+      setTrackingId(null);
+    }
+  }, [categorization.isTimeout, showToast]);
+
+  useEffect(() => {
+    const err = categorization.error;
+    if (err) {
+      showToast({
+        variant: 'error',
+        message: `Error al verificar la categorización: ${err.message}. Probá recategorizar manualmente.`,
+      });
+      setTrackingId(null);
+    }
+  }, [categorization.error, showToast]);
 
   const rows = useMemo(() => transactions.data ?? [], [transactions.data]);
   const cats = useMemo(() => categories.data ?? [], [categories.data]);
