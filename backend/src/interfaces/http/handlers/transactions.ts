@@ -117,8 +117,8 @@ export function createTransactionsRoutes(
           throw new HttpError(400, 'Field "occurredAt" must be an ISO date');
         }
         const notes = body.notes;
-        if (notes !== undefined && typeof notes !== 'string') {
-          throw new HttpError(400, 'Field "notes" must be a string');
+        if (notes !== null && notes !== undefined && typeof notes !== 'string') {
+          throw new HttpError(400, 'Field "notes" must be a string or null');
         }
         const transaction = await deps.createTransactionUseCase.execute({
           actor,
@@ -127,7 +127,7 @@ export function createTransactionsRoutes(
           merchant: requiredString(body, 'merchant'),
           amountCents,
           occurredAt,
-          notes,
+          notes: notes ?? undefined,
         });
         return jsonResponse(201, transaction, event);
       }

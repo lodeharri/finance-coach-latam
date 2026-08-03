@@ -98,6 +98,99 @@ const updatedTransaction = {
   notes: null,
 };
 
+describe('POST /transactions route handler', () => {
+  let createTransactionUseCase: CreateTransactionUseCase;
+  let categorizeTransactionUseCase: CategorizeTransactionUseCase;
+  let listTransactionsByUserUseCase: ListTransactionsByUserUseCase;
+  let updateTransactionCategoryUseCase: UpdateTransactionCategoryUseCase;
+  let handler: ReturnType<typeof createTransactionsRoutes>;
+
+  const validBody = {
+    accountId: '20000000-0000-4000-8000-000000000001',
+    merchant: 'PedidosYa',
+    amountCents: 4200000,
+    occurredAt: '2026-07-15T12:00:00.000Z',
+  };
+
+  const createdTransaction = {
+    id: transactionId,
+    userId: ownerActor.userId,
+    accountId: validBody.accountId,
+    categoryId: null,
+    merchant: validBody.merchant,
+    amount: validBody.amountCents,
+    occurredAt: validBody.occurredAt,
+    createdAt: '2026-07-15T12:01:00.000Z',
+    status: 'PENDING',
+    notes: null,
+  };
+
+  beforeEach(() => {
+    createTransactionUseCase = {
+      execute: vi.fn().mockResolvedValue(createdTransaction),
+    } as unknown as CreateTransactionUseCase;
+    categorizeTransactionUseCase = {
+      execute: vi.fn(),
+    } as unknown as CategorizeTransactionUseCase;
+    listTransactionsByUserUseCase = {
+      execute: vi.fn(),
+    } as unknown as ListTransactionsByUserUseCase;
+    updateTransactionCategoryUseCase = {
+      execute: vi.fn(),
+    } as unknown as UpdateTransactionCategoryUseCase;
+    handler = createTransactionsRoutes({
+      createTransactionUseCase,
+      categorizeTransactionUseCase,
+      listTransactionsByUserUseCase,
+      updateTransactionCategoryUseCase,
+      getTransactionByIdUseCase: { execute: vi.fn() } as unknown as GetTransactionByIdUseCase,
+    });
+  });
+
+  it('accepts notes: null (frontend sends null when notes field is empty) and normalizes it to undefined for the use case', async () => {
+    const result = await handler(
+      makeEvent({ ...validBody, notes: null }, 'POST', ownerClaims),
+    );
+
+    expect(result.statusCode).toBe(201);
+    expect(createTransactionUseCase.execute).toHaveBeenCalledWith(
+      expect.objectContaining({ notes: undefined }),
+    );
+  });
+
+  it('accepts the notes key being omitted entirely', async () => {
+    const result = await handler(makeEvent(validBody, 'POST', ownerClaims));
+
+    expect(result.statusCode).toBe(201);
+    expect(createTransactionUseCase.execute).toHaveBeenCalledWith(
+      expect.objectContaining({ notes: undefined }),
+    );
+  });
+
+  it('accepts notes as a non-empty string', async () => {
+    const result = await handler(
+      makeEvent({ ...validBody, notes: 'almuerzo con clientes' }, 'POST', ownerClaims),
+    );
+
+    expect(result.statusCode).toBe(201);
+    expect(createTransactionUseCase.execute).toHaveBeenCalledWith(
+      expect.objectContaining({ notes: 'almuerzo con clientes' }),
+    );
+  });
+
+  it('rejects notes of an invalid type (number) with 400', async () => {
+    const result = await handler(
+      makeEvent({ ...validBody, notes: 42 }, 'POST', ownerClaims),
+    );
+
+    expect(result.statusCode).toBe(400);
+    expect(bodyOf(result)).toMatchObject({
+      error: expect.stringContaining('Field "notes"'),
+    });
+    expect(createTransactionUseCase.execute).not.toHaveBeenCalled();
+  });
+});
+
 describe('PATCH /transactions/{id} route handler', () => {
   let createTransactionUseCase: CreateTransactionUseCase;
   let categorizeTransactionUseCase: CategorizeTransactionUseCase;
