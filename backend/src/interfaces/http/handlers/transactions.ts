@@ -1,5 +1,6 @@
 import type { CategorizeTransactionUseCase } from '../../../application/use-cases/categorize-transaction.use-case';
 import type { CreateTransactionUseCase } from '../../../application/use-cases/create-transaction.use-case';
+import type { GetTransactionByIdUseCase } from '../../../application/use-cases/get-transaction-by-id.use-case';
 import type { ListTransactionsByUserUseCase } from '../../../application/use-cases/list-transactions-by-user.use-case';
 import type { UpdateTransactionCategoryUseCase } from '../../../application/use-cases/update-transaction.use-case';
 import {
@@ -26,6 +27,7 @@ const MAX_LIST_LIMIT = 200;
 export interface TransactionsRoutesDeps {
   readonly createTransactionUseCase: CreateTransactionUseCase;
   readonly categorizeTransactionUseCase: CategorizeTransactionUseCase;
+  readonly getTransactionByIdUseCase: GetTransactionByIdUseCase;
   readonly listTransactionsByUserUseCase: ListTransactionsByUserUseCase;
   readonly updateTransactionCategoryUseCase: UpdateTransactionCategoryUseCase;
 }
@@ -57,6 +59,16 @@ export function createTransactionsRoutes(
       // the row (or is admin), so a spoofed userId in the body cannot
       // bypass the check (REQ-FFC-AUTH-TX-OWNER).
       const updateMatch = event.rawPath.match(/^\/transactions\/([^/]+)$/);
+      if (method === 'GET' && updateMatch) {
+        // REQ-FFC-BE-GET-TRANSACTION: read a single transaction. The
+        // use case loads by id and asserts owner-or-admin against the
+        // row's real userId.
+        const transaction = await deps.getTransactionByIdUseCase.execute({
+          actor,
+          id: decodeURIComponent(updateMatch[1]!),
+        });
+        return jsonResponse(200, transaction, event);
+      }
       if (method === 'PATCH' && updateMatch) {
         const body = parseBody(event);
         const categoryId = requiredString(body, 'categoryId');

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createTransactionsRoutes } from './transactions.routes';
 import type { CategorizeTransactionUseCase } from '../../application/use-cases/categorize-transaction.use-case';
 import type { CreateTransactionUseCase } from '../../application/use-cases/create-transaction.use-case';
+import type { GetTransactionByIdUseCase } from '../../application/use-cases/get-transaction-by-id.use-case';
 import type { ListTransactionsByUserUseCase } from '../../application/use-cases/list-transactions-by-user.use-case';
 import type { UpdateTransactionCategoryUseCase } from '../../application/use-cases/update-transaction.use-case';
 
@@ -134,6 +135,7 @@ describe('PATCH /transactions/{id} route handler', () => {
       categorizeTransactionUseCase,
       listTransactionsByUserUseCase,
       updateTransactionCategoryUseCase,
+      getTransactionByIdUseCase: { execute: vi.fn() } as unknown as GetTransactionByIdUseCase,
     });
   });
 
@@ -279,6 +281,7 @@ describe('PATCH /transactions/{id} route handler', () => {
       categorizeTransactionUseCase,
       listTransactionsByUserUseCase,
       updateTransactionCategoryUseCase,
+      getTransactionByIdUseCase: { execute: vi.fn() } as unknown as GetTransactionByIdUseCase,
     });
 
     const result = await handler(
@@ -310,6 +313,7 @@ describe('GET /transactions list limit validation', () => {
       categorizeTransactionUseCase: { execute: vi.fn() } as unknown as CategorizeTransactionUseCase,
       listTransactionsByUserUseCase,
       updateTransactionCategoryUseCase: { execute: vi.fn() } as unknown as UpdateTransactionCategoryUseCase,
+      getTransactionByIdUseCase: { execute: vi.fn() } as unknown as GetTransactionByIdUseCase,
     });
   });
 
@@ -397,6 +401,7 @@ describe('GET /transactions offset query param', () => {
       categorizeTransactionUseCase: { execute: vi.fn() } as unknown as CategorizeTransactionUseCase,
       listTransactionsByUserUseCase,
       updateTransactionCategoryUseCase: { execute: vi.fn() } as unknown as UpdateTransactionCategoryUseCase,
+      getTransactionByIdUseCase: { execute: vi.fn() } as unknown as GetTransactionByIdUseCase,
     });
   });
 
@@ -473,5 +478,100 @@ describe('GET /transactions offset query param', () => {
     expect(bodyOf(result)).toEqual({
       error: 'offset must be a non-negative integer',
     });
+  });
+});
+
+describe('GET /transactions/{id} route handler', () => {
+  let createTransactionUseCase: CreateTransactionUseCase;
+  let categorizeTransactionUseCase: CategorizeTransactionUseCase;
+  let listTransactionsByUserUseCase: ListTransactionsByUserUseCase;
+  let updateTransactionCategoryUseCase: UpdateTransactionCategoryUseCase;
+  let getTransactionByIdUseCase: GetTransactionByIdUseCase;
+  let handler: ReturnType<typeof createTransactionsRoutes>;
+
+  const fetchedTransaction = {
+    id: transactionId,
+    userId: ownerActor.userId,
+    accountId: '20000000-0000-4000-8000-000000000001',
+    categoryId: null,
+    merchant: 'PedidosYa',
+    amount: 4200000,
+    occurredAt: '2026-07-15T12:00:00.000Z',
+    createdAt: '2026-07-15T12:01:00.000Z',
+    status: 'PENDING',
+    notes: null,
+  };
+
+  beforeEach(() => {
+    createTransactionUseCase = { execute: vi.fn() } as unknown as CreateTransactionUseCase;
+    categorizeTransactionUseCase = { execute: vi.fn() } as unknown as CategorizeTransactionUseCase;
+    listTransactionsByUserUseCase = { execute: vi.fn() } as unknown as ListTransactionsByUserUseCase;
+    updateTransactionCategoryUseCase = { execute: vi.fn() } as unknown as UpdateTransactionCategoryUseCase;
+    // Mirror the use case contract: owner can read, admin can read any,
+    // non-owner non-admin is forbidden, missing id is not found.
+    getTransactionByIdUseCase = {
+      execute: vi.fn().mockImplementation(({ actor, id }) => {
+        if (id === 'missing-id') {
+          throw new Error('Transaction not found');
+        }
+        if (actor.role !== 'admin' && actor.userId !== ownerActor.userId) {
+          throw new Error('Forbidden: users can only act on their own resources');
+        }
+        return Promise.resolve(fetchedTransaction);
+      }),
+    } as unknown as GetTransactionByIdUseCase;
+    handler = createTransactionsRoutes({
+      createTransactionUseCase,
+      categorizeTransactionUseCase,
+      listTransactionsByUserUseCase,
+      updateTransactionCategoryUseCase,
+      getTransactionByIdUseCase,
+    });
+  });
+
+  it('returns 200 for owner reading their own transaction', async () => {
+    const result = await handler(
+      makeEvent(null, 'GET', ownerClaims, `/transactions/${transactionId}`),
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(bodyOf(result)).toEqual(fetchedTransaction);
+    expect(getTransactionByIdUseCase.execute).toHaveBeenCalledWith({
+      actor: ownerActor,
+      id: transactionId,
+    });
+  });
+
+  it('returns 200 for admin reading another user\'s transaction', async () => {
+    const result = await handler(
+      makeEvent(null, 'GET', adminClaims, `/transactions/${transactionId}`),
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(bodyOf(result)).toEqual(fetchedTransaction);
+    expect(getTransactionByIdUseCase.execute).toHaveBeenCalledWith({
+      actor: adminActor,
+      id: transactionId,
+    });
+  });
+
+  it('returns 403 for non-owner non-admin reading another user\'s row', async () => {
+    const result = await handler(
+      makeEvent(null, 'GET', otherClaims, `/transactions/${transactionId}`),
+    );
+
+    expect(result.statusCode).toBe(403);
+    expect(bodyOf(result)).toEqual({
+      error: 'Forbidden: users can only act on their own resources',
+    });
+  });
+
+  it('returns 404 for a non-existent transaction id', async () => {
+    const result = await handler(
+      makeEvent(null, 'GET', ownerClaims, '/transactions/missing-id'),
+    );
+
+    expect(result.statusCode).toBe(404);
+    expect(bodyOf(result)).toEqual({ error: 'Transaction not found' });
   });
 });
