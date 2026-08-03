@@ -5,6 +5,7 @@ import { CreateTransactionUseCase } from '../../application/use-cases/create-tra
 import { CreateUserUseCase } from '../../application/use-cases/create-user.use-case';
 import { DeleteCategoryUseCase } from '../../application/use-cases/delete-category.use-case';
 import { DeleteUserUseCase } from '../../application/use-cases/delete-user.use-case';
+import { GetTransactionByIdUseCase } from '../../application/use-cases/get-transaction-by-id.use-case';
 import { ListAccountsByUserUseCase } from '../../application/use-cases/list-accounts-by-user.use-case';
 import { ListCategoriesUseCase } from '../../application/use-cases/list-categories.use-case';
 import { ListTransactionsByUserUseCase } from '../../application/use-cases/list-transactions-by-user.use-case';
@@ -82,6 +83,10 @@ export function buildApiComposition() {
       merchantCache,
     ),
     listTransactionsByUserUseCase: new ListTransactionsByUserUseCase(
+      database,
+      transactionTableRef,
+    ),
+    getTransactionByIdUseCase: new GetTransactionByIdUseCase(
       database,
       transactionTableRef,
     ),

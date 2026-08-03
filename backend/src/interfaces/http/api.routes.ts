@@ -5,6 +5,7 @@ import type { CreateTransactionUseCase } from '../../application/use-cases/creat
 import type { CreateUserUseCase } from '../../application/use-cases/create-user.use-case';
 import type { DeleteCategoryUseCase } from '../../application/use-cases/delete-category.use-case';
 import type { DeleteUserUseCase } from '../../application/use-cases/delete-user.use-case';
+import type { GetTransactionByIdUseCase } from '../../application/use-cases/get-transaction-by-id.use-case';
 import type { ListAccountsByUserUseCase } from '../../application/use-cases/list-accounts-by-user.use-case';
 import type { ListCategoriesUseCase } from '../../application/use-cases/list-categories.use-case';
 import type { ListTransactionsByUserUseCase } from '../../application/use-cases/list-transactions-by-user.use-case';
@@ -30,6 +31,7 @@ export interface ApiRoutesDeps {
   readonly createTransactionUseCase: CreateTransactionUseCase;
   readonly categorizeTransactionUseCase: CategorizeTransactionUseCase;
   readonly listTransactionsByUserUseCase: ListTransactionsByUserUseCase;
+  readonly getTransactionByIdUseCase: GetTransactionByIdUseCase;
   readonly updateTransactionCategoryUseCase: UpdateTransactionCategoryUseCase;
 }
 

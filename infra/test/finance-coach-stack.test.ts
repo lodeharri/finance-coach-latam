@@ -65,6 +65,7 @@ const EXPECTED_ROUTE_THROTTLE: Record<string, RouteSettings> = {
   'POST /accounts': { ThrottlingRateLimit: 15, ThrottlingBurstLimit: 5 },
   'POST /categories': { ThrottlingRateLimit: 15, ThrottlingBurstLimit: 5 },
   'PATCH /transactions/{id}': { ThrottlingRateLimit: 30, ThrottlingBurstLimit: 10 },
+  'GET /transactions/{id}': { ThrottlingRateLimit: 30, ThrottlingBurstLimit: 10 },
   'DELETE /categories/{id}': { ThrottlingRateLimit: 30, ThrottlingBurstLimit: 10 },
   'DELETE /users/{id}': { ThrottlingRateLimit: 10, ThrottlingBurstLimit: 3 },
   'PATCH /categories/{id}': { ThrottlingRateLimit: 30, ThrottlingBurstLimit: 10 },
@@ -121,6 +122,15 @@ describe('FinanceCoachStack API Gateway routes', () => {
   it('still wires /categories/{id} PATCH + DELETE so the prior contract is preserved', () => {
     const methods = methodsForPath('/categories/{id}');
     expect(methods).toEqual(expect.arrayContaining(['DELETE', 'PATCH']));
+  });
+
+  // Polling fix — the per-transaction polling endpoint (used by
+  // useCategorizationStatus after a create) was returning 404 at the
+  // gateway edge because only PATCH was registered. Pin BOTH methods
+  // here so the regression cannot reappear.
+  it('registers GET and PATCH on /transactions/{id} (per-tx polling fix)', () => {
+    const methods = methodsForPath('/transactions/{id}');
+    expect(methods).toEqual(expect.arrayContaining(['GET', 'PATCH']));
   });
 });
 

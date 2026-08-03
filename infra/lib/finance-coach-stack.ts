@@ -233,6 +233,7 @@ export class FinanceCoachStack extends cdk.Stack {
       'POST /accounts': { ThrottlingRateLimit: 15, ThrottlingBurstLimit: 5 },
       'POST /categories': { ThrottlingRateLimit: 15, ThrottlingBurstLimit: 5 },
       'PATCH /transactions/{id}': { ThrottlingRateLimit: 30, ThrottlingBurstLimit: 10 },
+      'GET /transactions/{id}': { ThrottlingRateLimit: 30, ThrottlingBurstLimit: 10 },
       'DELETE /categories/{id}': { ThrottlingRateLimit: 30, ThrottlingBurstLimit: 10 },
       'DELETE /users/{id}': { ThrottlingRateLimit: 10, ThrottlingBurstLimit: 3 },
       'PATCH /categories/{id}': { ThrottlingRateLimit: 30, ThrottlingBurstLimit: 10 },
@@ -296,7 +297,7 @@ export class FinanceCoachStack extends cdk.Stack {
     });
     httpApi.addRoutes({
       path: '/transactions/{id}',
-      methods: [apigwv2.HttpMethod.PATCH],
+      methods: [apigwv2.HttpMethod.GET, apigwv2.HttpMethod.PATCH],
       integration: apiIntegration,
     });
     httpApi.addRoutes({

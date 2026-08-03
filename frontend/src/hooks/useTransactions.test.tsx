@@ -8,12 +8,13 @@ import { act, render, screen, waitFor } from '@/test/test-utils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/setup';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   useTransactions,
   useCreateTransaction,
   useUpdateTransaction,
   useRecategorizeTransaction,
+  useCategorizationStatus,
 } from './useTransactions';
 import { sessionStore } from '@/stores/sessionStore';
 
@@ -295,5 +296,283 @@ describe('useTransactions', () => {
     // fields (REL-002).
     await waitFor(() => expect(api.recategorizeIsError).toBe(false));
     expect(api.recategorizeError).toBeNull();
+  });
+});
+
+describe('useCategorizationStatus', () => {
+  const transaction = (status: 'PENDING' | 'CATEGORIZED' | 'FAILED') => ({
+    id: 't1',
+    userId: 'u1',
+    accountId: 'a1',
+    categoryId: null,
+    merchant: 'Mercado',
+    amountCents: 100,
+    occurredAt: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    status,
+    notes: null,
+  });
+
+  interface StatusProbe {
+    data: ReturnType<typeof useCategorizationStatus>['data'];
+    isTimeout: boolean;
+    error: Error | null;
+    refetch: () => void;
+  }
+
+  function StatusProbe({
+    transactionId,
+    onReady,
+  }: {
+    transactionId: string | null;
+    onReady: (api: StatusProbe) => void;
+  }) {
+    const result = useCategorizationStatus(transactionId);
+    onReady({
+      data: result.data,
+      isTimeout: result.isTimeout,
+      error: result.error,
+      refetch: result.refetch,
+    });
+    return <span data-testid="status">{result.data?.status ?? 'none'}</span>;
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.test');
+    sessionStore.getState().setSession({
+      idToken: 'jwt',
+      refreshToken: 'r',
+      expiresAt: Date.now() + 600_000,
+      userId: 'u1',
+      email: 'a@b.com',
+      role: 'user',
+    });
+    server.resetHandlers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllEnvs();
+    sessionStore.getState().clear();
+    localStorage.clear();
+  });
+
+  it('does NOT poll when transactionId is null', async () => {
+    let requests = 0;
+    server.use(
+      http.get('https://api.example.test/transactions/t1', () => {
+        requests += 1;
+        return HttpResponse.json(transaction('PENDING'));
+      }),
+    );
+
+    let api!: StatusProbe;
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <StatusProbe transactionId={null} onReady={(a) => (api = a)} />
+      </QueryClientProvider>,
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(9000);
+    });
+
+    expect(requests).toBe(0);
+    expect(api.data).toBeUndefined();
+    expect(api.isTimeout).toBe(false);
+  });
+
+  it('polls every 3000ms when status is PENDING', async () => {
+    let requests = 0;
+    server.use(
+      http.get('https://api.example.test/transactions/t1', () => {
+        requests += 1;
+        return HttpResponse.json(transaction('PENDING'));
+      }),
+    );
+
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <StatusProbe transactionId="t1" onReady={() => {}} />
+      </QueryClientProvider>,
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(requests).toBe(1);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(requests).toBe(2);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(requests).toBe(3);
+  });
+
+  it('STOPS polling when status becomes CATEGORIZED', async () => {
+    let requests = 0;
+    server.use(
+      http.get('https://api.example.test/transactions/t1', () => {
+        requests += 1;
+        return HttpResponse.json(transaction(requests === 1 ? 'PENDING' : 'CATEGORIZED'));
+      }),
+    );
+
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <StatusProbe transactionId="t1" onReady={() => {}} />
+      </QueryClientProvider>,
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(requests).toBe(1);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(6000);
+    });
+
+    expect(requests).toBe(2);
+  });
+
+  it('STOPS polling when status becomes FAILED (user must retry manually)', async () => {
+    // After a FAILED status, the hook must NOT keep hammering the API.
+    // The user clicks "Recategorize" to retry, which fires a fresh query
+    // through a different code path.
+    let requests = 0;
+    server.use(
+      http.get('https://api.example.test/transactions/t1', () => {
+        requests += 1;
+        return HttpResponse.json(transaction(requests === 1 ? 'PENDING' : 'FAILED'));
+      }),
+    );
+
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <StatusProbe transactionId="t1" onReady={() => {}} />
+      </QueryClientProvider>,
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(requests).toBe(1);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(requests).toBe(2);
+    // After FAILED: no more requests, even after 60 seconds.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60000);
+    });
+    expect(requests).toBe(2);
+  });
+
+  it('sets isTimeout after 90000ms of PENDING without resolution', async () => {
+    let api!: StatusProbe;
+    server.use(
+      http.get('https://api.example.test/transactions/t1', () =>
+        HttpResponse.json(transaction('PENDING')),
+      ),
+    );
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <StatusProbe transactionId="t1" onReady={(a) => (api = a)} />
+      </QueryClientProvider>,
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(api.isTimeout).toBe(false);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(89000);
+    });
+    expect(api.isTimeout).toBe(false);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+    expect(api.isTimeout).toBe(true);
+  });
+
+  it('clears isTimeout when transactionId changes', async () => {
+    let api!: StatusProbe;
+    let currentId: string | null = 't1';
+    server.use(
+      http.get('https://api.example.test/transactions/:id', () =>
+        HttpResponse.json(transaction('PENDING')),
+      ),
+    );
+    const { rerender } = render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <StatusProbe transactionId={currentId} onReady={(a) => (api = a)} />
+      </QueryClientProvider>,
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(91000);
+    });
+    expect(api.isTimeout).toBe(true);
+
+    // Switch to a different transaction — timeout must reset.
+    currentId = 't2';
+    rerender(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <StatusProbe transactionId={currentId} onReady={(a) => (api = a)} />
+      </QueryClientProvider>,
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(api.isTimeout).toBe(false);
+  });
+
+  it('exposes error when fetch fails', async () => {
+    let api!: StatusProbe;
+    server.use(
+      http.get('https://api.example.test/transactions/t1', () =>
+        HttpResponse.json({ error: 'Transaction not found' }, { status: 404 }),
+      ),
+    );
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <StatusProbe transactionId="t1" onReady={(a) => (api = a)} />
+      </QueryClientProvider>,
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+      for (let i = 0; i < 5; i += 1) await Promise.resolve();
+    });
+    expect(api.error).toBeInstanceOf(Error);
+    expect(api.error?.message).toMatch(/Transaction not found/i);
+  });
+
+  it('exposes refetch function', async () => {
+    let api!: StatusProbe;
+    let requests = 0;
+    server.use(
+      http.get('https://api.example.test/transactions/t1', () => {
+        requests += 1;
+        return HttpResponse.json(transaction('PENDING'));
+      }),
+    );
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <StatusProbe transactionId="t1" onReady={(a) => (api = a)} />
+      </QueryClientProvider>,
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(requests).toBe(1);
+    expect(typeof api.refetch).toBe('function');
+    await act(async () => {
+      api.refetch();
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(requests).toBeGreaterThanOrEqual(2);
   });
 });
