@@ -224,6 +224,12 @@ export class FinanceCoachStack extends cdk.Stack {
     // `throttlingRateLimit` here produces `throttlingRateLimit` in the
     // synthesized CloudFormation, which AWS silently ignores. PascalCase
     // passes through to CloudFormation unchanged.
+    // Ensure the Stage is updated AFTER any new Route is created. Without this,
+    // AWS processes the Stage UPDATE before the Route CREATE, and RouteSettings referencing a not-yet-existing route key fail with
+    // "Unable to find Route by key GET /transactions/{id}".
+    // Note: httpApi.addRoutes() returns the CfnRoute in some versions; in L2 CDK it returns void.
+    // Using httpApi itself as the dependency target is the safe pattern — the Stage will wait for all of httpApi's resources to settle.
+    stage.node.addDependency(httpApi);
     stage.routeSettings = {
       'GET /transactions': { ThrottlingRateLimit: 100, ThrottlingBurstLimit: 50 },
       'GET /accounts': { ThrottlingRateLimit: 50, ThrottlingBurstLimit: 20 },
