@@ -177,7 +177,7 @@ export function TransactionForm({ apiBaseUrl, userId, onCreated }: TransactionFo
         variant="editorial"
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
-        placeholder="Opcional"
+        placeholder="Ej: almuerzo con clientes"
         error={errors.notes}
       />
       {errors.form ? (
