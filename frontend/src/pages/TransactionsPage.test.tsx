@@ -7,7 +7,7 @@
  * resets for the next entry. The legacy "bottom of page" form section is
  * removed.
  */
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, userEvent } from '@/test/test-utils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
@@ -15,6 +15,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { server } from '@/test/setup';
 import { TransactionsPage } from './TransactionsPage';
 import { sessionStore } from '@/stores/sessionStore';
+import { toastStore } from '@/hooks/useToast';
+import type * as UseTransactionsModule from '@/hooks/useTransactions';
 
 const BASE = 'https://api.example.test';
 
@@ -313,5 +315,127 @@ describe('TransactionsPage — mobile header layout', () => {
     );
     expect(headerTitleRow).not.toBeNull();
     expect(headerTitleRow!.className).toMatch(/flex-wrap/);
+  });
+});
+describe('TransactionsPage — per-tx polling error/timeout handling', () => {
+  // We mock the hook so the page tests can drive `isTimeout` / `error`
+  // directly. Waiting 90s of fake time inside a React render tree is
+  // fragile (acts + state updates across the QueryClient subscription
+  // path); driving the result through a mocked hook is far more reliable
+  // and still pins the same contract: page state → toast state.
+  const createdTransaction = (
+    status: 'PENDING' | 'CATEGORIZED' | 'FAILED',
+    merchant = 'PedidosYa',
+  ) => ({
+    id: 't-new',
+    userId: 'u1',
+    accountId: 'acc-1',
+    merchant,
+    amountCents: 420000,
+    occurredAt: '2026-07-15T00:00:00.000Z',
+    createdAt: '2026-07-15T00:00:00.000Z',
+    status,
+    notes: null,
+    categoryId: null,
+  });
+
+  // Hoisted so the vi.mock factory can close over it (vi.mock is hoisted
+  // above the const declarations in this file).
+  const { mockCategorization, useCategorizationStatusMock } = vi.hoisted(() => {
+    const state = {
+      data: undefined as unknown,
+      isTimeout: false,
+      error: null as Error | null,
+      refetch: vi.fn(),
+    };
+    const fn = vi.fn(() => state);
+    return { mockCategorization: state, useCategorizationStatusMock: fn };
+  });
+
+  vi.mock('@/hooks/useTransactions', async (importOriginal) => {
+    const actual = await importOriginal<typeof UseTransactionsModule>();
+    return {
+      ...actual,
+      useCategorizationStatus: useCategorizationStatusMock,
+    };
+  });
+
+  beforeEach(() => {
+    mockCategorization.data = undefined;
+    mockCategorization.isTimeout = false;
+    mockCategorization.error = null;
+    vi.mocked(mockCategorization.refetch).mockClear();
+    useCategorizationStatusMock.mockClear();
+    sessionStore.getState().setSession({
+      idToken: 'jwt',
+      refreshToken: 'r',
+      expiresAt: Date.now() + 600_000,
+      userId: 'u1',
+      email: 'a@b.com',
+      role: 'user',
+    });
+    toastStore.setState({ toasts: [] });
+    server.resetHandlers();
+    server.use(
+      accountsHandler([{ id: 'acc-1', name: 'Checking' }]),
+      http.get(`${BASE}/transactions`, () => HttpResponse.json([])),
+      http.get(`${BASE}/categories`, () => HttpResponse.json([])),
+      http.post(`${BASE}/transactions`, () =>
+        HttpResponse.json(createdTransaction('PENDING'), { status: 201 }),
+      ),
+    );
+  });
+
+  afterEach(() => {
+    toastStore.setState({ toasts: [] });
+    sessionStore.getState().clear();
+    localStorage.clear();
+  });
+
+  it('shows a timeout toast when the polling hook reports isTimeout=true', async () => {
+    // Drive the hook to report a timeout. The page must toast and stop
+    // tracking (setTrackingId(null)) so the next create is free to start
+    // a fresh poll.
+    mockCategorization.isTimeout = true;
+    wrap(<TransactionsPage apiBaseUrl={BASE} />);
+
+    await waitFor(() => {
+      expect(toastStore.getState().toasts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            variant: 'error',
+            message: expect.stringMatching(/categorizaci[oó]n.*(m[aá]s de lo normal|tarda)/i),
+          }),
+        ]),
+      );
+    });
+  });
+
+  it('shows an error toast when the polling hook reports an error', async () => {
+    // Drive the hook to report a fetch failure. The page must toast the
+    // error message so the user knows to retry.
+    mockCategorization.error = new Error('Transaction not found');
+    wrap(<TransactionsPage apiBaseUrl={BASE} />);
+
+    await waitFor(() => {
+      expect(toastStore.getState().toasts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            variant: 'error',
+            message: expect.stringMatching(/error al verificar la categorizaci[oó]n/i),
+          }),
+        ]),
+      );
+    });
+    await waitFor(() => {
+      expect(toastStore.getState().toasts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            variant: 'error',
+            message: expect.stringMatching(/Transaction not found/i),
+          }),
+        ]),
+      );
+    });
   });
 });
