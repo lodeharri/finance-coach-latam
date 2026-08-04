@@ -97,12 +97,16 @@ export class FinanceCoachStack extends cdk.Stack {
       { jwtAudience: [userPoolClient.userPoolClientId] },
     );
 
+    const healthLogGroup = new logs.LogGroup(this, 'HealthHandlerLogGroup', {
+      retention: logs.RetentionDays.ONE_WEEK,
+    });
     const healthFunction = new lambda.Function(this, 'HealthHandler', {
       runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'handler.handler',
       code: lambda.Code.fromAsset('../backend/dist/health'),
       memorySize: 512,
       timeout: Duration.seconds(10),
+      logGroup: healthLogGroup,
       environment: {
         DATABASE_URL: databaseUrl,
         LLM_PROVIDER: llmProvider,
@@ -112,12 +116,16 @@ export class FinanceCoachStack extends cdk.Stack {
       description: 'Finance Coach LATAM health check using Neon Postgres through Drizzle HTTP.',
     });
 
+    const apiLogGroup = new logs.LogGroup(this, 'ApiHandlerLogGroup', {
+      retention: logs.RetentionDays.ONE_WEEK,
+    });
     const apiFunction = new lambda.Function(this, 'ApiHandler', {
       runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'handler.handler',
       code: lambda.Code.fromAsset('../backend/dist/api'),
       memorySize: 512,
       timeout: Duration.seconds(30),
+      logGroup: apiLogGroup,
       environment: {
         DATABASE_URL: databaseUrl,
         LLM_PROVIDER: llmProvider,
@@ -151,12 +159,16 @@ export class FinanceCoachStack extends cdk.Stack {
       'Queue of pending transactions awaiting asynchronous categorization.',
     );
 
+    const categorizerLogGroup = new logs.LogGroup(this, 'CategorizerFunctionLogGroup', {
+      retention: logs.RetentionDays.ONE_WEEK,
+    });
     const categorizerFunction = new lambda.Function(this, 'CategorizerFunction', {
       runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'handler.handler',
       code: lambda.Code.fromAsset('../backend/dist/categorizer'),
       memorySize: 512,
       timeout: Duration.minutes(2),
+      logGroup: categorizerLogGroup,
       environment: {
         DATABASE_URL: databaseUrl,
         LLM_PROVIDER: llmProvider,
@@ -312,12 +324,16 @@ export class FinanceCoachStack extends cdk.Stack {
       integration: apiIntegration,
     });
 
+    const migrationLogGroup = new logs.LogGroup(this, 'MigrationFunctionLogGroup', {
+      retention: logs.RetentionDays.ONE_WEEK,
+    });
     const migrationFunction = new lambda.Function(this, 'MigrationFunction', {
       runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'handler.handler',
       code: lambda.Code.fromAsset('../backend/dist/migration'),
       memorySize: 512,
       timeout: Duration.minutes(2),
+      logGroup: migrationLogGroup,
       environment: {
         DATABASE_URL: databaseUrl,
         COGNITO_USER_POOL_ID: userPool.userPoolId,
@@ -336,9 +352,12 @@ export class FinanceCoachStack extends cdk.Stack {
       'cognito-idp:AdminAddUserToGroup',
     );
 
+    const migrationProviderLogGroup = new logs.LogGroup(this, 'MigrationProviderLogGroup', {
+      retention: logs.RetentionDays.ONE_WEEK,
+    });
     const migrationProvider = new cr.Provider(this, 'MigrationProvider', {
       onEventHandler: migrationFunction,
-      logRetention: logs.RetentionDays.ONE_DAY,
+      logGroup: migrationProviderLogGroup,
     });
 
     const migrateAndSeed = new cdk.CustomResource(this, 'MigrateAndSeed', {
