@@ -45,6 +45,14 @@ interface StageResource {
   readonly Properties: StageProperties;
 }
 
+interface LogGroupProperties {
+  readonly RetentionInDays?: number;
+}
+
+interface LogGroupResource {
+  readonly Properties: LogGroupProperties;
+}
+
 /**
  * Per-route throttle limits declared in `finance-coach-stack.ts`. These are
  * the source of truth — the test asserts the synthesized CfnStage contains
@@ -178,4 +186,34 @@ describe('FinanceCoachStack API Gateway per-route throttling', () => {
     const extra = declared.filter((k) => !expected.has(k));
     expect(extra, `extra routes in RouteSettings not declared in test contract: ${extra.join(', ')}`).toEqual([]);
   });
+});
+
+describe('FinanceCoachStack CloudWatch log retention', () => {
+  /**
+   * Every Lambda in the stack is a portfolio demo on the AWS free tier. The
+   * 5 GB free CloudWatch Logs quota is plenty for a single demo, but if a
+   * log group ships with the CDK default (INFINITE), every line of every
+   * test invocation, every failed login, every DoS probe is kept forever
+   * and eventually costs real money. This block pins the policy at synth
+   * time: every `AWS::Logs::LogGroup` in the synthesized template must
+   * have `RetentionInDays: 7`.
+   */
+  const app = new App();
+  const stack = new FinanceCoachStack(app, 'TestStackLogRetention');
+  const template = Template.fromStack(stack);
+  const logGroups = template.findResources('AWS::Logs::LogGroup') as Record<string, LogGroupResource>;
+
+  it('creates at least one CloudWatch log group (sanity check)', () => {
+    expect(Object.keys(logGroups).length).toBeGreaterThan(0);
+  });
+
+  it.each(Object.entries(logGroups))(
+    'sets RetentionInDays=7 on log group "%s"',
+    (logicalId, resource) => {
+      expect(
+        resource.Properties.RetentionInDays,
+        `LogGroup ${logicalId} must have RetentionInDays=7 (free-tier cost protection)`,
+      ).toBe(7);
+    },
+  );
 });
