@@ -1,197 +1,154 @@
 # Finance Coach LATAM
 
-Personal finance assistant for LATAM users. AI-powered transaction categorization, semantic duplicate detection, and personalized insights.
+> AI-powered personal finance assistant for LATAM users.
+> Production-deployed serverless on AWS + Cloudflare Pages. ~$0/month ongoing cost.
 
-This is a **portfolio flagship** for a senior backend/cloud engineer. Built to demonstrate hexagonal architecture, SOLID principles, serverless AWS, and free-tier cost discipline on real infrastructure.
-
----
-
-## 📋 Specification (OpenSpec)
-
-The full Spec-Driven Development artifacts live under [`openspec/changes/initial-poc/`](./openspec/changes/initial-poc/):
-
-- [`proposal.md`](./openspec/changes/initial-poc/proposal.md) — Problem, scope, success metrics, risks
-- [`spec.md`](./openspec/changes/initial-poc/spec.md) — Requirements with Given/When/Then scenarios (R1–R10)
-- [`design.md`](./openspec/changes/initial-poc/design.md) — Architecture diagram, components, ADRs (Hexagonal, Custom Resource, Drizzle, Gemini, RBAC)
-- [`tasks.md`](./openspec/changes/initial-poc/tasks.md) — Implementation tasks with `[x]` / `[ ]` checkboxes (62% complete)
-
-**Status:** Phases 1–6 complete. Phase 6 (frontend foundation) closed via [`openspec/changes/archive/2026-07-31-frontend-foundation/`](./openspec/changes/archive/2026-07-31-frontend-foundation/) — backend 142/142 tests, frontend 157/157 tests, 8/8 ADRs honored, Litografía del Sur aesthetic applied, $0 cost confirmed. **Phase 6b (frontend flow completion) closed via [`openspec/changes/archive/2026-07-31-frontend-flow-completion/`](./openspec/changes/archive/2026-07-31-frontend-flow-completion/)** — backend 177/177 tests, frontend 273/273 tests, 5 ADRs honored, $0 cost confirmed; `PATCH /transactions/{id}` ships with owner-or-admin authz that runs after row load. Phase 7 (CI/CD with OIDC) pending.
-
-The frontend SPA shipped through [`openspec/changes/archive/2026-07-31-frontend-foundation/`](./openspec/changes/archive/2026-07-31-frontend-foundation/) (PR1–PR5 merged as #30–#34; SDD cycle closed with PASS WITH WARNINGS, 0 CRITICAL). The SPA is auto-deployed to Cloudflare Pages on every `main` push via the `deploy-frontend` job in `.github/workflows/deploy-staging.yml` (and mirrored in `deploy-production.yml`). See `frontend/RUNBOOK.md` for the deploy procedure, secrets table, 500-builds/mo ceiling, and CORS posture.
+**Live demo:** [finance-coach-latam.pages.dev](https://finance-coach-latam.pages.dev)
 
 ---
 
-## Folder Structure
+## What this demonstrates
 
-```
-finance-coach-latam/
-├── backend/          # Node 24 + TypeScript + esbuild. Hexagonal (domain/application/infrastructure/interfaces).
-├── frontend/         # React 18 + Vite + TS + Tailwind + Atomic Design. Live at https://finance-coach-latam.pages.dev (after deploy).
-├── infra/            # AWS CDK v2 (TypeScript), single stack, region us-east-1.
-├── .atl/             # Skill registry cache (internal tooling).
-└── README.md
-```
+A senior backend / cloud engineer building a real production system with discipline:
 
-### Backend Layout (hexagonal)
-
-```
-backend/src/
-├── domain/                          # Pure business logic. Zero external deps.
-│   ├── entities/                    # Domain entities.
-│   └── ports/                       # Interfaces (DatabasePort, LLMPort).
-├── application/                     # Use cases. Depend only on domain ports.
-│   └── use-cases/
-├── infrastructure/                  # Concrete adapters. Implements domain ports.
-│   ├── database/drizzle/            # Drizzle schema.
-│   └── config/                      # Typed env loader.
-├── interfaces/                      # HTTP entry points.
-│   └── http/
-└── main.ts                          # Composition root. The ONLY place that wires concrete adapters.
-```
-
-**Dependency rules**: `domain` → nothing · `application` → `domain/ports` only · `infrastructure` → implements `domain/ports` · `interfaces` → calls `application` use cases · `main.ts` composes everything.
+- **Hexagonal architecture** (ports & adapters) — swappable LLM provider, swappable DB; composition root is the only place that touches `process.env`.
+- **Async work offloading** — `POST` → API Lambda → SQS → Categorizer Lambda with built-in retry via `batchItemFailures`.
+- **4-layer AI categorization cascade** with short-circuit — keyword → cache → pgvector cosine → LLM. Only the last layer touches Gemini.
+- **pgvector semantic search** at 768-dim embeddings.
+- **CDK Custom Resource** for migration lifecycle — schema applies automatically on every `cdk deploy`, zero manual steps.
+- **Strict TDD** with work-unit commits, RED-GREEN-REFACTOR visible in `git log`.
+- **Spec-Driven Development** (proposal → spec → design → tasks → apply → verify → archive).
+- **Security**: Cognito JWT authorizer + owner / admin RBAC with authz-after-load pattern (no resource-existence leaks).
+- **644 tests** (211 backend + 433 frontend), all green on every PR.
+- **Single-stack CDK**, single-region (`us-east-1`), infra-as-code end-to-end.
 
 ---
 
-## Stack (locked)
+## Architecture
 
-| Layer | Choice |
+```mermaid
+flowchart TB
+    subgraph Client
+        UI[React 18 SPA<br/>Cloudflare Pages]
+    end
+
+    subgraph AWS["AWS · us-east-1"]
+        APIGW[API Gateway HTTP API<br/>JWT authorizer]
+        APILam[API Lambda<br/>512 MB · 10 s]
+        SQS[SQS Queue<br/>180 s visibility]
+        CatLam[Categorizer Lambda<br/>512 MB · 30 s]
+        Cognito[(Cognito User Pool<br/>JWT)]
+    end
+
+    subgraph External
+        Neon[(Neon Postgres<br/>+ pgvector)]
+        Gemini[Gemini API<br/>embed + generate]
+    end
+
+    UI -->|HTTPS| APIGW
+    APIGW --> APILam
+    APIGW -.->|verify| Cognito
+    APILam -->|INSERT PENDING| Neon
+    APILam -->|publish| SQS
+    SQS -->|batch| CatLam
+    CatLam -->|UPDATE CATEGORIZED| Neon
+    CatLam -->|embed + LLM| Gemini
+```
+
+**The interesting flow.** `POST /transactions` returns `201` in ~100 ms — just DB insert + SQS publish. Categorization runs asynchronously; the LLM can take 1–3 s without blocking the user. The frontend polls `GET /transactions/{id}` to detect the `PENDING → CATEGORIZED` transition and re-renders the row.
+
+---
+
+## The 4-layer categorization cascade
+
+Designed for cost and latency. The cascade **short-circuits at every layer** — ~80% of real-world LATAM transactions never hit the LLM.
+
+| Layer | Cost | Mechanism | When it runs |
+|---|---|---|---|
+| **L1 Keyword** | Free | Substring match against 16 hardcoded LATAM brands (`YPF`, `Netflix`, `Edesur`, `MercadoLibre`, …) | Always first |
+| **L2 Cache** | 1 DB query | Lookup by normalized merchant in `merchant_category_cache` | Only if L1 misses |
+| **L3 Embed + Auto-Accept** | 1 Gemini embed + 1 pgvector query | Compute 768-dim vector, cosine distance top-5, auto-accept if `top1.distance < top2.distance * 0.5` | Only if L2 misses |
+| **L4 LLM Ambiguity** | 1 Gemini Flash call | Receives top-5 IDs + names + slugs as context, returns one UUID | Only if L3 is ambiguous |
+
+The merchant cache is **write-through**: every successful categorization (L1, L3, L4) writes back. The second transaction for the same merchant is free.
+
+---
+
+## Stack
+
+| Layer | Tech |
 |---|---|
-| Runtime | Node 24.x, TypeScript, bundled with esbuild |
-| Database | Neon Postgres free tier (0.5 GB) |
-| ORM | Drizzle with `drizzle-orm/neon-http` (HTTPS, no VPC) |
-| API | API Gateway HTTP API v2 |
-| IaC | AWS CDK v2 (TypeScript) |
-| Region | `us-east-1` |
-| Lambda | 512 MB / 10 s |
-| LLM | Gemini 2.0 Flash + text-embedding-004 (free tier) |
-| Auth | Amazon Cognito User Pool (2 roles: admin + user, JWT authorizer) |
-| Frontend hosting | Cloudflare Pages (free tier, `$wrangler-action@v4`) |
-
-**Free tier only.** Zero ongoing cost in normal demo usage.
+| Frontend | React 18 · Vite · TypeScript (strict) · Tailwind 3 · Atomic Design |
+| Backend | Node 24 · TypeScript · esbuild · Vitest |
+| Architecture | Hexagonal (domain / application / infrastructure / interfaces) |
+| Database | Neon Postgres + `pgvector(768)` · Drizzle ORM |
+| LLM | Gemini Flash (`generateText`) · Gemini Embedding 001 (`embed`) |
+| API | API Gateway HTTP API v2 · JWT authorizer |
+| Async | SQS + Lambda event-source mapping · `batchItemFailures` retry |
+| Auth | Cognito User Pool · owner / admin RBAC · authz-after-load |
+| IaC | AWS CDK v2 (TypeScript) · single stack |
+| Frontend hosting | Cloudflare Pages · auto-deploy on `main` |
+| Testing | Vitest · MSW · Testing Library · 644 tests |
 
 ---
 
-## Health Foundation Deploy Steps
-
-The health endpoint verifies AWS Lambda can talk to Neon Postgres through Drizzle while preserving the hexagonal architecture. One entity (`health_check`), two use cases, two HTTP routes.
-
-### 1. Create a Neon project
-
-1. Sign up at <https://neon.tech>.
-2. Create a new project (region: AWS US East — closest to `us-east-1`).
-3. Copy the connection string. It looks like:
-   ```
-   postgres://user:password@ep-xxx.us-east-1.aws.neon.tech/neondb?sslmode=require
-   ```
-
-### 2. Backend setup
+## Run it locally
 
 ```bash
+# Backend
 cd backend
 npm install
-cp .env.example .env
-# Paste your DATABASE_URL into .env
-```
+cp .env.example .env             # fill DATABASE_URL
+npm run db:generate && npm run db:migrate
+npm run build && npm run dev
 
-### 3. Run migrations
-
-```bash
-npm run db:generate
-npm run db:migrate
-```
-
-### 4. Build backend
-
-```bash
-npm run build
-```
-
-This produces `backend/dist/health/handler.js` — the artifact CDK will bundle.
-
-### 5. Deploy infrastructure
-
-```bash
-cd ../infra
-npm install
-cp .env.example .env
-# Fill in the values, then load them into the CDK process.
-set -a && source .env && set +a
-npx cdk bootstrap
-npx cdk deploy
-```
-
-CDK will print the API URL in the output. Test it:
-
-```bash
-# POST a row
-curl -X POST <API_URL>/health -H "Content-Type: application/json" -d '{"name":"hello"}'
-
-# GET all rows
-curl <API_URL>/health
-```
-
----
-
-## Phases Roadmap
-
-For current status see [tasks.md](./openspec/changes/initial-poc/tasks.md). Summary:
-
-- ✅ **Phase 1 — POC foundation** (13/13): hexagonal backend, health endpoint, CDK deploy
-- ✅ **Phase 2 — DB lifecycle** (7/7): Custom Resource for migrations + seed
-- ✅ **Phase 3 — GitHub repo** (6/6): public `lodeharri/finance-coach-latam`
-- ✅ **Phase 4 — Domain entities + auth** (14/14): User/Account/Category/Transaction + Cognito + Gemini
-- 🔜 **Phase 5 — Production validation** (0/9): deploy Phase 4, verify all spec scenarios end-to-end
-- ✅ **Phase 6 — Frontend + polish (frontend foundation)** (11/11): React 18 + Vite + TS strict + Tailwind 3 SPA, Cloudflare Pages auto-deploy (`cloudflare/wrangler-action@v4`), `RUNBOOK.md`, "Litografía del Sur" design system. 5 chained PRs (#30–#34) merged stacked-to-main. Cycle closed — see [archive report](./openspec/changes/archive/2026-07-31-frontend-foundation/archive-report.md).
-- ✅ **Phase 6b — Frontend flow completion** (49/49): 3 chained PRs (#39 backend PATCH, #40 frontend flows, #41 dashboard + insights) + #42 (molecule test backfill) merged stacked-to-main. Adds `PATCH /transactions/{id}` (owner/admin authz-after-load), `joinUrl` URL helper, Transactions/Accounts/Admin Users/Dashboard/Insights pages, Recharts charts lazy-loaded, `LogoutButton` in masthead, role-aware sidebar, $0 cost confirmed. Backend 177/177, frontend 273/273, coverage 99.28% on molecules glob. Cycle closed — see [archive report](./openspec/changes/archive/2026-07-31-frontend-flow-completion/archive-report.md).
-- 🔜 **Phase 7 — CI/CD** (0/5): GitHub Actions with OIDC
-
-### Frontend quickstart
-
-```bash
+# Frontend (separate terminal)
 cd frontend
 npm install
-npm run dev          # http://localhost:5173
-npm test             # vitest run
-npm run typecheck    # tsc --noEmit
-npm run lint
-npm run build        # vite build → dist/
+npm run dev                      # http://localhost:5173
+
+# Tests
+cd backend  && npm test          # 211 tests
+cd frontend && npm test          # 433 tests
 ```
 
-See `frontend/RUNBOOK.md` for secrets, deploy procedure, and operational constraints.
+See [`frontend/RUNBOOK.md`](./frontend/RUNBOOK.md) for env vars, deploy procedure, and operational constraints.
 
 ---
 
-## SPA Routes (per role)
+## Cost reality
 
-The deployed SPA at <https://finance-coach-latam.pages.dev> exposes the following routes. The sidebar filters links by role; non-admin attempts to load an admin route render `ForbiddenPage` without firing any data-fetch hooks.
+Every service is on a free tier sized for a recruiter-demo workload:
 
-| Route | `user` | `admin` | Purpose |
-|---|---|---|---|
-| `/dashboard` | ✓ | ✓ | Monthly spend, top categories, PENDING/FAILED counts, donut + sparkline |
-| `/transactions` | ✓ | ✓ | List + create + categorize/override the current user's transactions (admin can pass `?userId=`) |
-| `/accounts` | ✓ | ✓ | List + create bank/cash/card accounts (admin can pass `?userId=`) |
-| `/insights` | ✓ | ✓ | 12-month spending trend, per-category breakdown, top merchants, period selector |
-| `/categories` | — | ✓ | Admin-only CRUD on the category palette (hex colors drive chart slices) |
-| `/admin/users` | — | ✓ | Admin-only user list + create |
+| Service | Free tier | Notes |
+|---|---|---|
+| Cloudflare Pages | Unlimited bandwidth · 500 builds / mo | Static SPA |
+| AWS Lambda | 1 M req / mo · 400 K GB-s compute | Always free |
+| SQS | 1 M req / mo | Always free |
+| API Gateway HTTP API | 1 M req / mo first 12 mo | ~$0.04 / yr after — effectively $0 |
+| Cognito | 50 K MAU | Always free for a demo |
+| Neon Postgres | 0.5 GB storage · 191.9 compute hrs / mo | Auto-suspends after 5 min idle |
+| CloudWatch Logs | 5 GB ingest + 5 GB storage | 7-day retention configured |
 
-Sign-out lives in the masthead (top-right), not in the sidebar — see `frontend/RUNBOOK.md` §15 for the full endpoint surface and known follow-ups.
-
----
-
-## Architectural Discipline
-
-- **Hexagonal** means the domain is inviolable. Tomorrow's `PostgresLocalAdapter` or `DynamoDbAdapter` drops in without touching use cases.
-- **Composition root** (`main.ts` and `lambdas/{name}/composition.ts`) is the ONLY place that wires concrete adapter types. Everything else depends on interfaces.
-- **No `process.env.X` outside `env.config.ts`.** All env access goes through the typed config object.
-- **CloudFormation Custom Resource** wires migrations into the deploy lifecycle — no manual `npm run db:migrate` ever.
-- **Tests** — 29 Vitest tests across 10 files (100% coverage on `src/application/use-cases/`). Run with `cd backend && npm test`.
+Practical estimate: **$0 – $0.50 / year** at demo traffic.
 
 ---
 
-## Cost Discipline
+## Quality signals
 
-- Neon free tier: 0.5 GB storage, 190 compute hours/month.
-- Lambda free tier: 1M requests/month, 400k GB-seconds.
-- API Gateway HTTP API: 1M requests/month for first 12 months.
-- Dormant resources: Neon scales to zero after 5 min idle. Lambda costs nothing when idle. **Net cost: $0/month for normal demo usage.**
+- **644 tests** passing on every PR (Vitest backend + Vitest + MSW + Testing Library frontend).
+- `tsc --noEmit` clean on both projects.
+- `cdk synth` clean.
+- Cloudflare Pages auto-deploys on every `main` push.
+- Zero secrets in the repo (SSM Parameter Store at deploy time).
+- Conventional commits, work-unit atomic commits — `git log` reads as a story.
+
+---
+
+## Intentional out-of-scope
+
+- Multi-region (single `us-east-1`).
+- Production observability stack (CloudWatch defaults only).
+- CI/CD with OIDC federation (planned).
+- Mobile native apps (responsive web only).
+- Real bank integrations (manual entry only).
