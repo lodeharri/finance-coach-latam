@@ -4,6 +4,7 @@ import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
@@ -340,6 +341,7 @@ export class FinanceCoachStack extends cdk.Stack {
         COGNITO_REGION: this.region,
         LLM_PROVIDER: llmProvider,
         GEMINI_API_KEY: geminiApiKey,
+        DEMO_PASSWORD_PARAM_NAME: '/finance-coach-latam/demo-password',
       },
       description: 'Runs Drizzle migrations, Cognito bootstrap, and idempotent seed on every deploy.',
     });
@@ -350,6 +352,25 @@ export class FinanceCoachStack extends cdk.Stack {
       'cognito-idp:AdminGetUser',
       'cognito-idp:AdminSetUserPassword',
       'cognito-idp:AdminAddUserToGroup',
+    );
+
+    // The demo password lives in SSM Parameter Store (SecureString, standard
+    // tier, aws/ssm key); only its NAME is in the Lambda environment. Grant
+    // least-privilege read + decrypt access on exactly that parameter to the
+    // migration Lambda role ONLY — no other Lambda can read it.
+    migrationFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['ssm:GetParameter'],
+        resources: [
+          `arn:aws:ssm:${this.region}:${this.account}:parameter/finance-coach-latam/demo-password`,
+        ],
+      }),
+    );
+    migrationFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['kms:Decrypt'],
+        resources: [`arn:aws:kms:${this.region}:${this.account}:alias/aws/ssm`],
+      }),
     );
 
     const migrationProviderLogGroup = new logs.LogGroup(this, 'MigrationProviderLogGroup', {
