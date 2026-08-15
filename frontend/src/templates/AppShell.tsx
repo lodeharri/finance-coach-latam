@@ -2,7 +2,6 @@ import { useState, type ReactNode } from 'react';
 import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { HexStamp } from '@/atoms/HexStamp';
 import { LogoutButton } from '@/atoms/LogoutButton';
-import { RoleBadge } from '@/molecules/RoleBadge';
 import { Sidebar } from '@/organisms/Sidebar';
 import { ToastHost } from '@/organisms/ToastHost';
 import { sessionStore } from '@/stores/sessionStore';
@@ -47,7 +46,9 @@ function derivePageName(path: string): string {
 export function AppShell({ pageName, role, children }: AppShellProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const currentRole = role ?? sessionStore.getState().role ?? null;
+  const session = sessionStore.getState();
+  const currentRole = role ?? session.role ?? null;
+  const sessionUserIdentity = session.email;
   const resolvedPageName = pageName ?? derivePageName(location.pathname);
   const folio = folioFor(location.pathname);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -101,7 +102,15 @@ export function AppShell({ pageName, role, children }: AppShellProps) {
           >
             {formatToday()}
           </span>
-          {currentRole ? <RoleBadge role={currentRole} /> : null}
+          {sessionUserIdentity ? (
+            <span
+              data-testid="app-shell-user-identity"
+              aria-label="Sesión iniciada"
+              className="font-mono text-xs tracking-[0.15em] text-ink-paper/90"
+            >
+              {sessionUserIdentity}
+            </span>
+          ) : null}
           <LogoutButton />
         </div>
       </header>
