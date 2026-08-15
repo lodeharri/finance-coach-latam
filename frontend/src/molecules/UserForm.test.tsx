@@ -1,8 +1,8 @@
 /**
  * UserForm molecule tests (REQ-FFC-USR-CREATE-ADMIN).
  *
- * Colocated because the molecule has logic (controlled inputs, tier select,
- * validation, submit handler wired to useCreateUser). Covers email/name/tier
+ * Colocated because the molecule has logic (controlled inputs, role select,
+ * validation, submit handler wired to useCreateUser). Covers email/name/role
  * fields, email format validation, the JetBrains-Mono email display via
  * FormField type=email, and the admin create mutation pending UI.
  */
@@ -41,7 +41,7 @@ describe('UserForm', () => {
     localStorage.clear();
   });
 
-  it('renders the form with default props (empty email, empty name, BRONZE tier)', () => {
+  it('renders the form with default props (empty email, empty name, role=user)', () => {
     wrap(<UserForm apiBaseUrl={BASE} />);
 
     const email = screen.getByLabelText(/correo/i) as HTMLInputElement;
@@ -53,10 +53,10 @@ describe('UserForm', () => {
     expect(name).toBeInTheDocument();
     expect(name.value).toBe('');
 
-    // Tier is rendered as an editorial radiogroup (custom radio squares).
-    expect(screen.getByRole('radio', { name: 'BRONZE' })).toHaveAttribute('aria-checked', 'true');
-    expect(screen.getByRole('radio', { name: 'SILVER' })).toHaveAttribute('aria-checked', 'false');
-    expect(screen.getByRole('radio', { name: 'GOLD' })).toHaveAttribute('aria-checked', 'false');
+    // Role is a native select; default is "user".
+    const role = screen.getByLabelText(/rol/i) as HTMLSelectElement;
+    expect(role).toBeInTheDocument();
+    expect(role.value).toBe('user');
   });
 
   it('email field accepts input', async () => {
@@ -77,19 +77,18 @@ describe('UserForm', () => {
     expect((name as HTMLInputElement).value).toBe('Jane Doe');
   });
 
-  it('tier radio group accepts BRONZE / SILVER / GOLD selections', async () => {
+  it('role select accepts admin / user selections', async () => {
     const user = userEvent.setup();
     wrap(<UserForm apiBaseUrl={BASE} />);
 
-    await user.click(screen.getByRole('radio', { name: 'SILVER' }));
-    expect(screen.getByRole('radio', { name: 'SILVER' })).toHaveAttribute('aria-checked', 'true');
-    expect(screen.getByRole('radio', { name: 'BRONZE' })).toHaveAttribute('aria-checked', 'false');
+    const role = screen.getByLabelText(/rol/i) as HTMLSelectElement;
+    expect(role.value).toBe('user');
 
-    await user.click(screen.getByRole('radio', { name: 'GOLD' }));
-    expect(screen.getByRole('radio', { name: 'GOLD' })).toHaveAttribute('aria-checked', 'true');
+    await user.selectOptions(role, 'admin');
+    expect(role.value).toBe('admin');
 
-    await user.click(screen.getByRole('radio', { name: 'BRONZE' }));
-    expect(screen.getByRole('radio', { name: 'BRONZE' })).toHaveAttribute('aria-checked', 'true');
+    await user.selectOptions(role, 'user');
+    expect(role.value).toBe('user');
   });
 
   it('submitting with empty email + empty name surfaces both field errors', async () => {
@@ -138,7 +137,7 @@ describe('UserForm', () => {
     expect(screen.queryByText(/correo es obligatorio/i)).not.toBeInTheDocument();
   });
 
-  it('submitting with a valid email but missing tier is impossible (tier defaults to BRONZE)', async () => {
+  it('submitting with a valid email and missing role defaults role to "user"', async () => {
     let captured: unknown = null;
     server.use(
       http.post(`${BASE}/users`, async ({ request }) => {
@@ -155,20 +154,25 @@ describe('UserForm', () => {
 
     await user.type(screen.getByLabelText(/correo/i), 'jane@example.com');
     await user.type(screen.getByLabelText(/nombre/i), 'Jane');
-    // Do not touch the tier select.
+    // Do not touch the role select.
     await user.click(screen.getByRole('button', { name: /agregar usuario/i }));
 
     await waitFor(() => expect(captured).not.toBeNull());
-    expect(captured).toEqual({ email: 'jane@example.com', name: 'Jane', tier: 'BRONZE' });
+    const body = captured as { email: string; name: string; role: string; tempPassword: string };
+    expect(body.email).toBe('jane@example.com');
+    expect(body.name).toBe('Jane');
+    expect(body.role).toBe('user');
+    expect(typeof body.tempPassword).toBe('string');
+    expect(body.tempPassword.length).toBeGreaterThanOrEqual(16);
   });
 
-  it('submitting with valid values POSTs { email, name, tier } to /users', async () => {
+  it('submitting with valid values POSTs { email, name, role, tempPassword } to /users', async () => {
     let captured: unknown = null;
     server.use(
       http.post(`${BASE}/users`, async ({ request }) => {
         captured = await request.json();
         return HttpResponse.json(
-          { id: 'u-new', email: 'jane@example.com', name: 'Jane Doe', tier: 'GOLD' },
+          { id: 'u-new', email: 'jane@example.com', name: 'Jane Doe', tier: 'BRONZE' },
           { status: 201 },
         );
       }),
@@ -179,11 +183,16 @@ describe('UserForm', () => {
 
     await user.type(screen.getByLabelText(/correo/i), 'jane@example.com');
     await user.type(screen.getByLabelText(/nombre/i), 'Jane Doe');
-    await user.click(screen.getByRole('radio', { name: 'GOLD' }));
+    await user.selectOptions(screen.getByLabelText(/rol/i), 'admin');
     await user.click(screen.getByRole('button', { name: /agregar usuario/i }));
 
     await waitFor(() => expect(captured).not.toBeNull());
-    expect(captured).toEqual({ email: 'jane@example.com', name: 'Jane Doe', tier: 'GOLD' });
+    const body = captured as { email: string; name: string; role: string; tempPassword: string };
+    expect(body.email).toBe('jane@example.com');
+    expect(body.name).toBe('Jane Doe');
+    expect(body.role).toBe('admin');
+    expect(typeof body.tempPassword).toBe('string');
+    expect(body.tempPassword.length).toBeGreaterThanOrEqual(16);
   });
 
   it('trims email and name before POSTing', async () => {

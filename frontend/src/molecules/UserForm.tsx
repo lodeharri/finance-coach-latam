@@ -3,17 +3,12 @@
  *
  * Editorial treatment:
  * - Hairline-bottom inputs (variant="editorial").
- * - Custom tier select rendered as a 3-row mono caps grid (BANK | CASH | CARD
- *   style, applied to tier choices).
  * - Email displayed in JetBrains Mono (signature element).
  */
 import { useState } from 'react';
 import { Button } from '@/atoms/Button';
 import { FormField } from './FormField';
 import { useCreateUser } from '@/hooks/useUsers';
-import type { UserTier } from '@/services/types';
-
-const TIERS: UserTier[] = ['BRONZE', 'SILVER', 'GOLD'];
 
 export interface UserFormProps {
   apiBaseUrl: string;
@@ -28,7 +23,8 @@ export interface UserFormProps {
 export function UserForm({ apiBaseUrl, onCreated }: UserFormProps) {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
-  const [tier, setTier] = useState<UserTier>('BRONZE');
+  const [role, setRole] = useState<'admin' | 'user'>('user');
+  const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ email?: string; name?: string; form?: string }>({});
   const create = useCreateUser({ apiBaseUrl });
 
@@ -42,10 +38,15 @@ export function UserForm({ apiBaseUrl, onCreated }: UserFormProps) {
       return;
     }
     setErrors({});
+    const tempPassword =
+      Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + '!A1';
     create.mutate(
-      { email: email.trim(), name: name.trim(), tier },
+      { email: email.trim(), name: name.trim(), role, tempPassword },
       {
-        onSuccess: () => onCreated?.(),
+        onSuccess: () => {
+          setGeneratedPassword(tempPassword);
+          onCreated?.();
+        },
         onError: (err) => {
           setErrors({ form: err instanceof Error ? err.message : 'No se pudo crear el usuario.' });
         },
@@ -78,37 +79,32 @@ export function UserForm({ apiBaseUrl, onCreated }: UserFormProps) {
       />
       <div className="flex flex-col gap-2">
         <label
-          htmlFor="usr-tier"
+          htmlFor="usr-role"
           className="block font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta-soft"
         >
-          Nivel
+          Rol
         </label>
-        <div className="flex gap-2" role="radiogroup" aria-label="Nivel de usuario">
-          {TIERS.map((t) => {
-            const active = tier === t;
-            return (
-              <button
-                key={t}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                onClick={() => setTier(t)}
-                className={
-                  'inline-flex h-9 items-center justify-center rounded-sm border px-3 transition-colors ' +
-                  'font-mono text-xs uppercase tracking-[0.2em] ' +
-                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-cobalto focus-visible:ring-offset-2 ' +
-                  (active
-                    ? 'border-ink-cobalto bg-ink-cobalto text-ink-paper'
-                    : 'border-ink-paper-press bg-ink-paper-lift text-ink-tinta hover:border-ink-cobalto/40')
-                }
-                data-testid={`user-tier-${t}`}
-              >
-                {t}
-              </button>
-            );
-          })}
-        </div>
+        <select
+          id="usr-role"
+          value={role}
+          onChange={(e) => setRole(e.target.value as 'admin' | 'user')}
+          className="h-9 rounded-sm border border-ink-paper-press bg-ink-paper-lift px-3 font-mono text-xs uppercase tracking-[0.2em] focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-cobalto focus-visible:ring-offset-2"
+        >
+          <option value="user">user</option>
+          <option value="admin">admin</option>
+        </select>
       </div>
+      {generatedPassword ? (
+        <div
+          data-testid="user-generated-password"
+          className="flex flex-col gap-1 rounded-sm border border-ink-cobalto/40 bg-ink-paper-lift p-3"
+        >
+          <span className="font-mono text-xs uppercase tracking-[0.2em] text-ink-tinta-soft">
+            Contraseña temporal
+          </span>
+          <span className="select-all break-all font-mono text-sm">{generatedPassword}</span>
+        </div>
+      ) : null}
       {errors.form ? (
         <span role="alert" className="font-body text-sm text-ink-negativo">{errors.form}</span>
       ) : null}
