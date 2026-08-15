@@ -41,8 +41,6 @@ jobs:
     if: needs.guard.outputs.confirmed == 'true'
     environment: production   # required reviewers gate applies here
     runs-on: ubuntu-latest
-    outputs:
-      api_url: ${{ steps.outputs.outputs.api_url }}
     defaults:
       run:
         working-directory: backend
@@ -55,7 +53,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Provision demo password (SSM)
         env:
