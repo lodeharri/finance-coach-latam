@@ -45,7 +45,6 @@ export function UserForm({ apiBaseUrl, onCreated }: UserFormProps) {
       {
         onSuccess: () => {
           setGeneratedPassword(tempPassword);
-          onCreated?.();
         },
         onError: (err) => {
           setErrors({ form: err instanceof Error ? err.message : 'No se pudo crear el usuario.' });
@@ -103,6 +102,15 @@ export function UserForm({ apiBaseUrl, onCreated }: UserFormProps) {
             Contraseña temporal
           </span>
           <span className="select-all break-all font-mono text-sm">{generatedPassword}</span>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => onCreated?.()}
+            data-testid="user-generated-password-close"
+          >
+            Listo
+          </Button>
         </div>
       ) : null}
       {errors.form ? (
