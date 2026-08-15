@@ -5,9 +5,10 @@
  * opens the Sidebar as a slide-over drawer on small viewports. The button is
  * only visible below the md breakpoint (`md:hidden` per Tailwind).
  */
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { fireEvent, render, screen } from '@/test/test-utils';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { sessionStore } from '@/stores/sessionStore';
 import { AppShell } from './AppShell';
 
 function renderShell(path = '/dashboard', role: 'admin' | 'user' | undefined = 'user') {
@@ -85,6 +86,43 @@ describe('AppShell mobile sidebar', () => {
     // flex-wrap lets the date / RoleBadge / LogoutButton wrap to a second
     // row when there is no horizontal room.
     expect(masthead.className).toMatch(/flex-wrap/);
+  });
+});
+
+describe('AppShell session user identity', () => {
+  beforeEach(() => {
+    sessionStore.getState().setSession({
+      idToken: 'jwt',
+      refreshToken: 'r',
+      expiresAt: Date.now() + 600_000,
+      userId: 'u1',
+      email: 'ada.lovelace@example.com',
+      role: 'admin',
+    });
+  });
+
+  afterEach(() => {
+    sessionStore.getState().clear();
+    localStorage.clear();
+  });
+
+  it('renders the authenticated user email next to the logout button (not the role literal)', () => {
+    renderShell('/dashboard', 'admin');
+    const identity = screen.getByTestId('app-shell-user-identity');
+    expect(identity.textContent).toBe('ada.lovelace@example.com');
+  });
+
+  it('does not render the role literal ("User" / "Admin") in the masthead', () => {
+    renderShell('/dashboard', 'user');
+    expect(screen.queryByTestId('role-badge')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^User$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Admin$/)).not.toBeInTheDocument();
+  });
+
+  it('omits the identity span when there is no active session', () => {
+    sessionStore.getState().clear();
+    renderShell('/dashboard', 'admin');
+    expect(screen.queryByTestId('app-shell-user-identity')).not.toBeInTheDocument();
   });
 });
 
