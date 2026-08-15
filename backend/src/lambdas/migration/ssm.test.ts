@@ -1,5 +1,5 @@
 import { GetParameterCommand, SSMClient } from '@aws-sdk/client-ssm';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, type Mock } from 'vitest';
 import { readDemoPassword } from './ssm';
 
 /**
@@ -9,26 +9,31 @@ import { readDemoPassword } from './ssm';
  * fall back to a default password.
  */
 describe('readDemoPassword', () => {
+  type SendMock = Mock<(command: unknown) => Promise<unknown>>;
+
+  function mockSend(): SendMock {
+    return vi.spyOn(SSMClient.prototype, 'send') as unknown as SendMock;
+  }
+
   it('returns the decrypted value from GetParameter', async () => {
-    const send = vi
-      .spyOn(SSMClient.prototype, 'send')
-      .mockResolvedValue({ Parameter: { Value: 's3cret-value' } });
+    const send = mockSend();
+    send.mockResolvedValue({ Parameter: { Value: 's3cret-value' } });
     const client = new SSMClient({ region: 'us-east-1' });
 
     await expect(
       readDemoPassword(client, '/finance-coach-latam/demo-password'),
     ).resolves.toBe('s3cret-value');
 
-    const command = send.mock.calls[0]?.[0];
+    const command = send.mock.calls[0]?.[0] as GetParameterCommand | undefined;
     expect(command).toBeInstanceOf(GetParameterCommand);
-    expect(command.input).toEqual({
+    expect(command?.input).toEqual({
       Name: '/finance-coach-latam/demo-password',
       WithDecryption: true,
     });
   });
 
   it('throws when the parameter is missing (no Parameter in the response)', async () => {
-    vi.spyOn(SSMClient.prototype, 'send').mockResolvedValue({});
+    mockSend().mockResolvedValue({});
     const client = new SSMClient({ region: 'us-east-1' });
 
     await expect(
@@ -37,9 +42,7 @@ describe('readDemoPassword', () => {
   });
 
   it('throws when the parameter value is empty (fail closed, no fallback)', async () => {
-    vi.spyOn(SSMClient.prototype, 'send').mockResolvedValue({
-      Parameter: { Value: '' },
-    });
+    mockSend().mockResolvedValue({ Parameter: { Value: '' } });
     const client = new SSMClient({ region: 'us-east-1' });
 
     await expect(
@@ -51,7 +54,7 @@ describe('readDemoPassword', () => {
     const accessDenied = Object.assign(new Error('AccessDeniedException'), {
       name: 'AccessDeniedException',
     });
-    vi.spyOn(SSMClient.prototype, 'send').mockRejectedValue(accessDenied);
+    mockSend().mockRejectedValue(accessDenied);
     const client = new SSMClient({ region: 'us-east-1' });
 
     await expect(
