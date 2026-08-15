@@ -6,6 +6,7 @@ interface AppEnv {
   readonly COGNITO_USER_POOL_ID?: string;
   readonly COGNITO_USER_POOL_CLIENT_ID?: string;
   readonly COGNITO_REGION?: string;
+  readonly DEMO_PASSWORD_PARAM_NAME?: string;
   readonly AWS_REGION?: string;
   readonly NODE_ENV?: string;
   readonly LOG_LEVEL?: string;
@@ -22,6 +23,7 @@ function readEnv(): AppEnv {
     COGNITO_USER_POOL_ID: process.env.COGNITO_USER_POOL_ID,
     COGNITO_USER_POOL_CLIENT_ID: process.env.COGNITO_USER_POOL_CLIENT_ID,
     COGNITO_REGION: process.env.COGNITO_REGION,
+    DEMO_PASSWORD_PARAM_NAME: process.env.DEMO_PASSWORD_PARAM_NAME,
     AWS_REGION: process.env.AWS_REGION,
     NODE_ENV: process.env.NODE_ENV,
     LOG_LEVEL: process.env.LOG_LEVEL,
@@ -40,6 +42,7 @@ export interface CognitoConfig {
   readonly region: string;
   readonly userPoolId: string;
   readonly userPoolClientId: string;
+  readonly demoPasswordParamName: string;
 }
 
 export interface CorsConfig {
@@ -128,6 +131,27 @@ export function parseAllowedOrigins(csv: string | undefined): readonly string[] 
   return Object.freeze(out);
 }
 
+/**
+ * Resolve the SSM parameter name that holds the demo password.
+ *
+ * The migration Lambda reads the demo password from SSM Parameter Store at
+ * runtime; only the parameter NAME travels via the Lambda environment. The
+ * value itself must never appear in git, Lambda env, or the CloudFormation
+ * template.
+ *
+ * Fails closed: when `DEMO_PASSWORD_PARAM_NAME` is unset or blank, throws so
+ * the deploy fails instead of silently using a different parameter.
+ */
+export function resolveDemoPasswordParamName(value: string | undefined): string {
+  const paramName = value?.trim();
+  if (!paramName) {
+    throw new Error(
+      'DEMO_PASSWORD_PARAM_NAME is required for the migration Lambda. Set it in the Lambda environment (deploy) before invoking the function.',
+    );
+  }
+  return paramName;
+}
+
 let cached: Config | undefined;
 
 export function getConfig(): Config {
@@ -153,6 +177,7 @@ export function getConfig(): Config {
       region: env.COGNITO_REGION?.trim() || awsRegion,
       userPoolId: env.COGNITO_USER_POOL_ID?.trim() || '',
       userPoolClientId: env.COGNITO_USER_POOL_CLIENT_ID?.trim() || '',
+      demoPasswordParamName: env.DEMO_PASSWORD_PARAM_NAME?.trim() || '',
     }),
     awsRegion,
     nodeEnv,
