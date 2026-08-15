@@ -41,6 +41,23 @@ jobs:
       - name: Build bundles (health/api/migration/categorizer)
         run: npm run build
 
+      - name: Scan for demo password (tracked files + bundles)
+        run: |
+          set -euo pipefail
+          # Assemble the pattern at runtime so this scan never self-matches
+          # its own command line (git grep searches tracked file content).
+          SECRET_YEAR="2026"
+          PATTERN="demo#${SECRET_YEAR}"
+          if git grep -in "$PATTERN"; then
+            echo "::error::Demo password pattern found in tracked files"
+            exit 1
+          fi
+          if grep -rin "$PATTERN" dist; then
+            echo "::error::Demo password pattern found in built bundles"
+            exit 1
+          fi
+          echo "No demo password pattern found in tracked files or bundles"
+
       - name: Upload backend artifacts
         uses: actions/upload-artifact@v5
         with:

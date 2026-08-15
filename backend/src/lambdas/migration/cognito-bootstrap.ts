@@ -6,6 +6,8 @@ import {
   CognitoIdentityProviderClient,
   type AttributeType,
 } from '@aws-sdk/client-cognito-identity-provider';
+import type { SSMClient } from '@aws-sdk/client-ssm';
+import { readDemoPassword } from './ssm';
 
 export interface DemoUserIds {
   readonly adminUserId: string;
@@ -18,26 +20,33 @@ interface DemoUser {
   readonly group: 'admins' | 'users';
 }
 
-const DEMO_PASSWORD = 'Demo#2026!';
 const DEMO_USERS: readonly DemoUser[] = [
   { email: 'admin@portfolio.dev', name: 'Admin Demo', group: 'admins' },
   { email: 'user@portfolio.dev', name: 'Usuario Demo', group: 'users' },
 ];
 
 export class CognitoDemoUsersBootstrap {
+  private password?: string;
+
   constructor(
     private readonly client: CognitoIdentityProviderClient,
+    private readonly ssmClient: SSMClient,
     private readonly userPoolId: string,
+    private readonly passwordParamName: string,
   ) {}
 
   async ensureUsers(): Promise<DemoUserIds> {
+    const password = (this.password ??= await readDemoPassword(
+      this.ssmClient,
+      this.passwordParamName,
+    ));
     const [adminUserId, regularUserId] = await Promise.all(
-      DEMO_USERS.map((user) => this.ensureUser(user)),
+      DEMO_USERS.map((user) => this.ensureUser(user, password)),
     );
     return { adminUserId, regularUserId };
   }
 
-  private async ensureUser(user: DemoUser): Promise<string> {
+  private async ensureUser(user: DemoUser, password: string): Promise<string> {
     let existing = await this.getUser(user.email);
     if (!existing) {
       try {
@@ -45,7 +54,7 @@ export class CognitoDemoUsersBootstrap {
           new AdminCreateUserCommand({
             UserPoolId: this.userPoolId,
             Username: user.email,
-            TemporaryPassword: DEMO_PASSWORD,
+            TemporaryPassword: password,
             MessageAction: 'SUPPRESS',
             UserAttributes: [
               { Name: 'email', Value: user.email },
@@ -71,7 +80,7 @@ export class CognitoDemoUsersBootstrap {
       new AdminSetUserPasswordCommand({
         UserPoolId: this.userPoolId,
         Username: existing.username,
-        Password: DEMO_PASSWORD,
+        Password: password,
         Permanent: true,
       }),
     );

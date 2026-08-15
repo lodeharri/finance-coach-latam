@@ -58,7 +58,7 @@
 
 - [ ] **5.1** `cdk deploy` with the Phase 4 stack — verify Cognito User Pool created
 - [ ] **5.2** Verify bootstrap Lambda creates 2 Cognito users + assigns to groups
-- [ ] **5.3** Test login flow: `user@portfolio.dev` / `Demo#2026!` returns JWT
+- [ ] **5.3** Test login flow: `user@portfolio.dev` (demo credentials read from SSM) returns JWT
 - [ ] **5.4** Test authenticated `GET /categories` returns 8 rows
 - [ ] **5.5** Test `POST /transactions` persists with `status: 'PENDING'`
 - [ ] **5.6** Test `POST /transactions/{id}/categorize` calls Gemini and updates `categoryId`

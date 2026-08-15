@@ -24,10 +24,13 @@
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.1098.0",
     "@aws-sdk/client-sqs": "^3.1098.0",
+    "@aws-sdk/client-ssm": "^3.1098.0",
     "@neondatabase/serverless": "^1.1.0",
     "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {
+    "@emnapi/core": "^1.7.1",
+    "@emnapi/runtime": "^1.7.1",
     "@types/aws-lambda": "^8.10.142",
     "@types/node": "^24.0.0",
     "@vitest/coverage-v8": "^4.1.10",

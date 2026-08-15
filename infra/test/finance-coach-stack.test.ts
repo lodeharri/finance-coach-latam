@@ -217,3 +217,37 @@ describe('FinanceCoachStack CloudWatch log retention', () => {
     },
   );
 });
+
+describe('FinanceCoachStack demo password SSM access', () => {
+  /**
+   * The migration Lambda reads the demo password from SSM Parameter Store at
+   * runtime. Only the parameter NAME travels in the Lambda environment; the
+   * VALUE never enters the CloudFormation template. Its execution role gets
+   * least-privilege access to read + decrypt exactly that parameter.
+   *
+   * Assertions are substring-based on `Template.fromStack(...).toJSON()`
+   * because the ARNs embed region/account tokens that stay unresolved in
+   * tests (they synthesize to Fn::Join fragments).
+   */
+  const app = new App();
+  const stack = new FinanceCoachStack(app, 'TestStackDemoPassword');
+  const templateJson = JSON.stringify(Template.fromStack(stack).toJSON());
+
+  it('passes DEMO_PASSWORD_PARAM_NAME to the migration Lambda environment', () => {
+    expect(templateJson).toContain('DEMO_PASSWORD_PARAM_NAME');
+    expect(templateJson).toContain('parameter/finance-coach-latam/demo-password');
+  });
+
+  it('scopes ssm:GetParameter to the demo password parameter ARN', () => {
+    expect(templateJson).toContain('parameter/finance-coach-latam/demo-password');
+  });
+
+  it('grants kms:Decrypt on the aws/ssm key alias', () => {
+    expect(templateJson).toContain('alias/aws/ssm');
+  });
+
+  it('only the migration Lambda role can call ssm:GetParameter', () => {
+    const occurrences = templateJson.split('"ssm:GetParameter"').length - 1;
+    expect(occurrences).toBe(1);
+  });
+});
