@@ -192,6 +192,7 @@ export class FinanceCoachStack extends cdk.Stack {
       'cognito-idp:AdminAddUserToGroup',
       'cognito-idp:ListUsers',
       'cognito-idp:AdminListGroupsForUser',
+      'cognito-idp:AdminDeleteUser',
     );
 
     apiFunction.addEnvironment('CATEGORIZER_QUEUE_URL', categorizerQueue.queueUrl);

@@ -11,7 +11,7 @@
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/services/apiClient';
-import type { User, UserTier } from '@/services/types';
+import type { User } from '@/services/types';
 import { joinUrl } from '@/services/url';
 
 const KEY = ['users'] as const;
@@ -38,7 +38,8 @@ export function useUsers({ apiBaseUrl }: UseUsersArgs) {
 export interface CreateUserInput {
   email: string;
   name: string;
-  tier: UserTier;
+  role: 'admin' | 'user';
+  tempPassword: string;
 }
 
 export function useCreateUser({ apiBaseUrl }: UseUsersArgs) {

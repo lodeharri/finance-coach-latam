@@ -1,6 +1,7 @@
 import {
   AdminAddUserToGroupCommand,
   AdminCreateUserCommand,
+  AdminDeleteUserCommand,
   AdminListGroupsForUserCommand,
   CognitoIdentityProviderClient,
   ListUsersCommand,
@@ -93,6 +94,23 @@ export class CognitoIdentityAdapter implements AuthPort {
         group.GroupName ? [group.GroupName] : [],
       ),
     };
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    const username =
+      this.usernamesByUserId.get(userId) ??
+      (await this.findUserByFilter('sub', userId))?.Username;
+    if (!username) {
+      throw new Error(`CognitoIdentityAdapter.deleteUser: user "${userId}" not found`);
+    }
+
+    await this.client.send(
+      new AdminDeleteUserCommand({
+        UserPoolId: this.config.userPoolId,
+        Username: username,
+      }),
+    );
+    this.usernamesByUserId.delete(userId);
   }
 
   private async findUserByFilter(
