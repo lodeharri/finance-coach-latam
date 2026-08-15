@@ -41,6 +41,8 @@ jobs:
     if: needs.guard.outputs.confirmed == 'true'
     environment: production   # required reviewers gate applies here
     runs-on: ubuntu-latest
+    outputs:
+      api_url: ${{ steps.outputs.outputs.api_url }}
     defaults:
       run:
         working-directory: backend
