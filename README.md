@@ -141,6 +141,7 @@ Practical estimate: **$0 – $0.50 / year** at demo traffic.
 - `cdk synth` clean.
 - Cloudflare Pages auto-deploys on every `main` push.
 - Zero secrets in the repo (SSM Parameter Store at deploy time).
+- Demo credentials: `admin@portfolio.dev` / `user@portfolio.dev` — passwords live in SSM (`/finance-coach-latam/demo-password`, SecureString, provisioned from `DEMO_PASSWORD` on every deploy; the value never enters git, Lambda env, or the CloudFormation template).
 - Conventional commits, work-unit atomic commits — `git log` reads as a story.
 
 ---
