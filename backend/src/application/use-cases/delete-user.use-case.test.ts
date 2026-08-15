@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DeleteUserUseCase } from './delete-user.use-case';
 import type { User } from '../../domain/entities/user.entity';
+import type { AuthPort } from '../../domain/ports/cognito.port';
 import type { DatabasePort } from '../../domain/ports/database.port';
 import { userTableRef } from '../../infrastructure/database/drizzle/schema';
 
@@ -16,6 +17,7 @@ const targetUser: User = {
 
 describe('DeleteUserUseCase', () => {
   let database: DatabasePort;
+  let auth: AuthPort;
   let useCase: DeleteUserUseCase;
 
   beforeEach(() => {
@@ -25,12 +27,19 @@ describe('DeleteUserUseCase', () => {
       update: vi.fn(),
       delete: vi.fn(),
     };
-    useCase = new DeleteUserUseCase(database, userTableRef);
+    auth = {
+      createUser: vi.fn(),
+      addUserToGroup: vi.fn(),
+      getUserByEmail: vi.fn(),
+      deleteUser: vi.fn(),
+    };
+    useCase = new DeleteUserUseCase(database, auth, userTableRef);
   });
 
   it('deletes the user row when the actor is admin and the target is not self', async () => {
     vi.mocked(database.select).mockResolvedValueOnce([targetUser]);
     vi.mocked(database.delete).mockResolvedValueOnce(undefined);
+    vi.mocked(auth.deleteUser).mockResolvedValueOnce(undefined);
 
     await useCase.execute({ actor: adminActor, id: targetUser.id });
 
@@ -41,6 +50,30 @@ describe('DeleteUserUseCase', () => {
     expect(database.delete).toHaveBeenCalledWith(userTableRef, { id: targetUser.id });
   });
 
+  it('calls auth.deleteUser with the target id after the DB delete', async () => {
+    vi.mocked(database.select).mockResolvedValueOnce([targetUser]);
+    vi.mocked(database.delete).mockResolvedValueOnce(undefined);
+    vi.mocked(auth.deleteUser).mockResolvedValueOnce(undefined);
+
+    await useCase.execute({ actor: adminActor, id: targetUser.id });
+
+    expect(auth.deleteUser).toHaveBeenCalledTimes(1);
+    expect(auth.deleteUser).toHaveBeenCalledWith(targetUser.id);
+  });
+
+  it('still deletes the DB row when auth.deleteUser throws (Cognito failure is swallowed)', async () => {
+    vi.mocked(database.select).mockResolvedValueOnce([targetUser]);
+    vi.mocked(database.delete).mockResolvedValueOnce(undefined);
+    vi.mocked(auth.deleteUser).mockRejectedValueOnce(new Error('cognito down'));
+
+    await expect(
+      useCase.execute({ actor: adminActor, id: targetUser.id }),
+    ).resolves.toBeUndefined();
+
+    expect(database.delete).toHaveBeenCalledWith(userTableRef, { id: targetUser.id });
+    expect(auth.deleteUser).toHaveBeenCalledWith(targetUser.id);
+  });
+
   it('rejects a non-admin actor before touching the database', async () => {
     await expect(
       useCase.execute({ actor: userActor, id: targetUser.id }),
@@ -48,6 +81,7 @@ describe('DeleteUserUseCase', () => {
 
     expect(database.select).not.toHaveBeenCalled();
     expect(database.delete).not.toHaveBeenCalled();
+    expect(auth.deleteUser).not.toHaveBeenCalled();
   });
 
   it('rejects an admin actor who tries to delete their own account', async () => {
@@ -57,6 +91,7 @@ describe('DeleteUserUseCase', () => {
 
     expect(database.select).not.toHaveBeenCalled();
     expect(database.delete).not.toHaveBeenCalled();
+    expect(auth.deleteUser).not.toHaveBeenCalled();
   });
 
   it('throws a not-found error when the user id does not exist', async () => {
@@ -70,6 +105,7 @@ describe('DeleteUserUseCase', () => {
     ).rejects.toThrow('User not found');
 
     expect(database.delete).not.toHaveBeenCalled();
+    expect(auth.deleteUser).not.toHaveBeenCalled();
   });
 
   it('propagates database.delete errors unchanged', async () => {
@@ -80,5 +116,7 @@ describe('DeleteUserUseCase', () => {
     await expect(
       useCase.execute({ actor: adminActor, id: targetUser.id }),
     ).rejects.toThrow('connection terminated');
+
+    expect(auth.deleteUser).not.toHaveBeenCalled();
   });
 });

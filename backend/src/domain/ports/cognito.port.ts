@@ -19,4 +19,5 @@ export interface AuthPort {
   createUser(input: CreateIdentityInput): Promise<{ userId: string }>;
   addUserToGroup(userId: string, groupName: string): Promise<void>;
   getUserByEmail(email: string): Promise<IdentityUser | null>;
+  deleteUser(userId: string): Promise<void>;
 }

@@ -50,7 +50,7 @@ export function buildApiComposition() {
   return createApiRoutes({
     createUserUseCase: new CreateUserUseCase(database, auth, userTableRef),
     listUsersUseCase: new ListUsersUseCase(database, userTableRef),
-    deleteUserUseCase: new DeleteUserUseCase(database, userTableRef),
+    deleteUserUseCase: new DeleteUserUseCase(database, auth, userTableRef),
     createAccountUseCase: new CreateAccountUseCase(database, accountTableRef),
     listAccountsByUserUseCase: new ListAccountsByUserUseCase(
       database,

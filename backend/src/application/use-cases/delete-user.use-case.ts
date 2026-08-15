@@ -1,4 +1,5 @@
 import type { User } from '../../domain/entities/user.entity';
+import type { AuthPort } from '../../domain/ports/cognito.port';
 import type { DatabasePort, TableRef } from '../../domain/ports/database.port';
 import { assertIsAdmin, type Actor } from './authorization';
 
@@ -8,7 +9,7 @@ export interface DeleteUserInput {
 }
 
 /**
- * Delete a user row from `users`.
+ * Delete a user row from `users` and revoke the matching Cognito identity.
  *
  * Flow:
  *  1. assertIsAdmin → 403 on non-admin actor.
@@ -19,16 +20,16 @@ export interface DeleteUserInput {
  *  3. select(id) → 404 'User not found' when the row is absent.
  *  4. `database.delete(id)` — any driver error propagates unchanged so the
  *     route layer surfaces 500.
- *
- * We only delete the local mirror row here. The Cognito identity lives
- * independently; revoking the identity is a separate concern handled by the
- * identity adapter if/when the admin tool grows that capability. For the
- * MVP scope (portfolio demo) the local row delete is enough — the spec
- * asked for a "similar pattern to category DELETE" which is DB-only.
+ *  5. `auth.deleteUser(id)` — a Cognito API failure is intentionally
+ *     swallowed. The local DB row is the source of truth for this app;
+ *     losing it is unrecoverable, while an orphaned Cognito identity can
+ *     be reaped by a follow-up admin sweep. Preserving the prior
+ *     invariant is more important than a clean cross-system delete.
  */
 export class DeleteUserUseCase {
   constructor(
     private readonly database: DatabasePort,
+    private readonly auth: AuthPort,
     private readonly userTableRef: TableRef<User>,
   ) {}
 
@@ -49,5 +50,6 @@ export class DeleteUserUseCase {
     }
 
     await this.database.delete(this.userTableRef, { id: input.id });
+    await this.auth.deleteUser(input.id).catch(() => undefined);
   }
 }

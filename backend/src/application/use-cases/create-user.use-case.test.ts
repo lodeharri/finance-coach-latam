@@ -21,6 +21,7 @@ describe('CreateUserUseCase', () => {
       createUser: vi.fn(),
       addUserToGroup: vi.fn(),
       getUserByEmail: vi.fn(),
+      deleteUser: vi.fn(),
     };
     useCase = new CreateUserUseCase(database, auth, userTableRef);
   });
