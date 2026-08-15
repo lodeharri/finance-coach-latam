@@ -231,4 +231,116 @@ describe('authService', () => {
     authService.logout();
     expect(sessionStore.getState().idToken).toBeUndefined();
   });
+
+  it('login() returns a NEW_PASSWORD_REQUIRED signal when Cognito issues the challenge instead of throwing', async () => {
+    globalThis.fetch = (() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            ChallengeName: 'NEW_PASSWORD_REQUIRED',
+            Session: 'mock-session',
+            ChallengeParameters: { USERNAME: 'alice@example.com' },
+          }),
+          { status: 200 },
+        ),
+      )) as unknown as typeof fetch;
+
+    const result = await authService.login({
+      email: 'alice@example.com',
+      password: 'TempPw1!',
+      clientId: 'client-id',
+      region: 'us-east-1',
+    });
+
+    expect(result).toEqual({
+      kind: 'NEW_PASSWORD_REQUIRED',
+      session: 'mock-session',
+      email: 'alice@example.com',
+    });
+    expect(sessionStore.getState().idToken).toBeUndefined();
+  });
+
+  it('login() throws when NEW_PASSWORD_REQUIRED has no Session', async () => {
+    globalThis.fetch = (() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({ ChallengeName: 'NEW_PASSWORD_REQUIRED' }),
+          { status: 200 },
+        ),
+      )) as unknown as typeof fetch;
+
+    await expect(
+      authService.login({
+        email: 'alice@example.com',
+        password: 'TempPw1!',
+        clientId: 'client-id',
+        region: 'us-east-1',
+      }),
+    ).rejects.toThrow(/missing Session/);
+  });
+
+  it('completeNewPasswordChallenge() posts RespondToAuthChallenge and consumes the AuthenticationResult', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          AuthenticationResult: {
+            IdToken: ID_TOKEN,
+            RefreshToken: 'refresh-after',
+            ExpiresIn: 3600,
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    await authService.completeNewPasswordChallenge({
+      email: 'alice@example.com',
+      session: 'mock-session',
+      newPassword: 'BrandNew1!',
+      clientId: 'client-id',
+      region: 'us-east-1',
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('cognito-idp.us-east-1.amazonaws.com');
+    expect((init.headers as Record<string, string>)['X-Amz-Target']).toBe(
+      'AWSCognitoIdentityProviderService.RespondToAuthChallenge',
+    );
+    const body = JSON.parse(init.body as string) as Record<string, unknown>;
+    expect(body).toEqual({
+      ChallengeName: 'NEW_PASSWORD_REQUIRED',
+      ClientId: 'client-id',
+      Session: 'mock-session',
+      ChallengeResponses: {
+        USERNAME: 'alice@example.com',
+        NEW_PASSWORD: 'BrandNew1!',
+      },
+    });
+
+    const s = sessionStore.getState();
+    expect(s.idToken).toBe(ID_TOKEN);
+    expect(s.userId).toBe('u-123');
+    expect(s.email).toBe('alice@example.com');
+    expect(s.role).toBe('user');
+    expect(s.refreshToken).toBe('refresh-after');
+  });
+
+  it('completeNewPasswordChallenge() throws when the second response also lacks AuthenticationResult', async () => {
+    globalThis.fetch = (() =>
+      Promise.resolve(
+        new Response(JSON.stringify({}), { status: 200 }),
+      )) as unknown as typeof fetch;
+
+    await expect(
+      authService.completeNewPasswordChallenge({
+        email: 'alice@example.com',
+        session: 'mock-session',
+        newPassword: 'BrandNew1!',
+        clientId: 'client-id',
+        region: 'us-east-1',
+      }),
+    ).rejects.toThrow(/missing AuthenticationResult fields/);
+  });
 });
