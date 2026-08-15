@@ -72,13 +72,19 @@ function resolveRoleFromGroups(groups: readonly string[]): Role | undefined {
   return undefined;
 }
 
-async function postCognito<T>(region: string, body: Record<string, unknown>): Promise<T> {
+type CognitoAction = 'InitiateAuth' | 'RespondToAuthChallenge';
+
+async function postCognito<T>(
+  region: string,
+  body: Record<string, unknown>,
+  action: CognitoAction = 'InitiateAuth',
+): Promise<T> {
   const url = `https://cognito-idp.${region}.amazonaws.com/`;
   const res = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-amz-json-1.1',
-      'X-Amz-Target': 'AWSCognitoIdentityProviderService.InitiateAuth',
+      'X-Amz-Target': `AWSCognitoIdentityProviderService.${action}`,
     },
     body: JSON.stringify(body),
   });
@@ -97,36 +103,88 @@ interface InitiateAuthResult {
     RefreshToken?: string;
     ExpiresIn?: number;
   };
+  ChallengeName?: string;
+  Session?: string;
+  ChallengeParameters?: Record<string, string>;
+}
+
+export interface NewPasswordRequiredSignal {
+  kind: 'NEW_PASSWORD_REQUIRED';
+  session: string;
+  email: string;
+}
+
+interface CompleteNewPasswordArgs {
+  email: string;
+  session: string;
+  newPassword: string;
+  clientId: string;
+  region: string;
+}
+
+function consumeAuthenticationResult(auth: NonNullable<InitiateAuthResult['AuthenticationResult']>): void {
+  const claims = decodeIdToken(auth.IdToken as string);
+  const groups = normalizeGroups(claims['cognito:groups']);
+  const role = resolveRoleFromGroups(groups);
+  if (!role || !claims.sub || !claims.email) {
+    throw new Error('IdToken missing sub/email or unrecognized group');
+  }
+  sessionStore.getState().setSession({
+    idToken: auth.IdToken as string,
+    refreshToken: auth.RefreshToken as string,
+    expiresAt: Date.now() + (auth.ExpiresIn as number) * 1000,
+    userId: claims.sub,
+    email: claims.email,
+    role,
+  });
 }
 
 export const authService = {
-  async login(args: LoginArgs): Promise<void> {
-    const result = await postCognito<InitiateAuthResult>(args.region, {
-      AuthFlow: 'USER_PASSWORD_AUTH',
-      ClientId: args.clientId,
-      AuthParameters: {
-        USERNAME: args.email,
-        PASSWORD: args.password,
+  async login(args: LoginArgs): Promise<void | NewPasswordRequiredSignal> {
+    const result = await postCognito<InitiateAuthResult>(
+      args.region,
+      {
+        AuthFlow: 'USER_PASSWORD_AUTH',
+        ClientId: args.clientId,
+        AuthParameters: {
+          USERNAME: args.email,
+          PASSWORD: args.password,
+        },
       },
-    });
+      'InitiateAuth',
+    );
+    if (result.ChallengeName === 'NEW_PASSWORD_REQUIRED') {
+      if (!result.Session) {
+        throw new Error('Cognito NEW_PASSWORD_REQUIRED challenge missing Session');
+      }
+      return { kind: 'NEW_PASSWORD_REQUIRED', session: result.Session, email: args.email };
+    }
     const auth = result.AuthenticationResult;
     if (!auth || !auth.IdToken || !auth.RefreshToken || !auth.ExpiresIn) {
       throw new Error('Cognito response missing AuthenticationResult fields');
     }
-    const claims = decodeIdToken(auth.IdToken);
-    const groups = normalizeGroups(claims['cognito:groups']);
-    const role = resolveRoleFromGroups(groups);
-    if (!role || !claims.sub || !claims.email) {
-      throw new Error('IdToken missing sub/email or unrecognized group');
+    consumeAuthenticationResult(auth);
+  },
+
+  async completeNewPasswordChallenge(args: CompleteNewPasswordArgs): Promise<void> {
+    const result = await postCognito<InitiateAuthResult>(
+      args.region,
+      {
+        ChallengeName: 'NEW_PASSWORD_REQUIRED',
+        ClientId: args.clientId,
+        Session: args.session,
+        ChallengeResponses: {
+          USERNAME: args.email,
+          NEW_PASSWORD: args.newPassword,
+        },
+      },
+      'RespondToAuthChallenge',
+    );
+    const auth = result.AuthenticationResult;
+    if (!auth || !auth.IdToken || !auth.RefreshToken || !auth.ExpiresIn) {
+      throw new Error('Cognito response missing AuthenticationResult fields');
     }
-    sessionStore.getState().setSession({
-      idToken: auth.IdToken,
-      refreshToken: auth.RefreshToken,
-      expiresAt: Date.now() + auth.ExpiresIn * 1000,
-      userId: claims.sub,
-      email: claims.email,
-      role,
-    });
+    consumeAuthenticationResult(auth);
   },
 
   async refreshIfNeeded(args: RefreshArgs): Promise<void> {
@@ -134,13 +192,17 @@ export const authService = {
     if (!session.idToken || !session.refreshToken || !session.expiresAt) return;
     const msLeft = session.expiresAt - Date.now();
     if (msLeft > 60_000) return; // > 60s, no refresh needed
-    const result = await postCognito<InitiateAuthResult>(args.region, {
-      AuthFlow: 'REFRESH_TOKEN_AUTH',
-      ClientId: args.clientId,
-      AuthParameters: {
-        REFRESH_TOKEN: session.refreshToken,
+    const result = await postCognito<InitiateAuthResult>(
+      args.region,
+      {
+        AuthFlow: 'REFRESH_TOKEN_AUTH',
+        ClientId: args.clientId,
+        AuthParameters: {
+          REFRESH_TOKEN: session.refreshToken,
+        },
       },
-    });
+      'InitiateAuth',
+    );
     const auth = result.AuthenticationResult;
     if (!auth || !auth.IdToken || !auth.ExpiresIn) {
       throw new Error('Cognito refresh missing fields');
