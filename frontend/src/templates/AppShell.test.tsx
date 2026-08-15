@@ -5,8 +5,8 @@
  * opens the Sidebar as a slide-over drawer on small viewports. The button is
  * only visible below the md breakpoint (`md:hidden` per Tailwind).
  */
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { fireEvent, render, screen } from '@/test/test-utils';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@/test/test-utils';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { sessionStore } from '@/stores/sessionStore';
 import { AppShell } from './AppShell';
@@ -136,3 +136,46 @@ function withinDrawer(drawer: HTMLElement) {
     },
   };
 }
+
+describe('AppShell logout wires Cognito env into LogoutButton', () => {
+  beforeEach(() => {
+    vi.stubEnv('VITE_COGNITO_USER_POOL_CLIENT_ID', 'env-client-id');
+    vi.stubEnv('VITE_COGNITO_REGION', 'us-west-2');
+    sessionStore.getState().setSession({
+      idToken: 'jwt',
+      refreshToken: 'refresh-from-shell',
+      expiresAt: Date.now() + 600_000,
+      userId: 'u1',
+      email: 'ada.lovelace@example.com',
+      role: 'user',
+    });
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValue(new Response('{}', { status: 200 })) as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    sessionStore.getState().clear();
+    localStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  it('clicking the masthead LogoutButton POSTs RevokeToken to the env-derived Cognito endpoint', async () => {
+    renderShell();
+    const fetchMock = globalThis.fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock.mockClear();
+
+    fireEvent.click(screen.getByRole('button', { name: /cerrar sesión/i }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://cognito-idp.us-west-2.amazonaws.com/');
+    expect((init.headers as Record<string, string>)['X-Amz-Target']).toBe(
+      'AWSCognitoIdentityProviderService.RevokeToken',
+    );
+    const body = JSON.parse(init.body as string) as Record<string, unknown>;
+    expect(body).toEqual({ ClientId: 'env-client-id', Token: 'refresh-from-shell' });
+    await waitFor(() => expect(sessionStore.getState().idToken).toBeUndefined());
+  });
+});

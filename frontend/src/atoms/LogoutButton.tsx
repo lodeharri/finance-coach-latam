@@ -10,7 +10,7 @@
  * jargon.
  */
 import { useNavigate } from 'react-router-dom';
-import { sessionStore } from '@/stores/sessionStore';
+import { authService } from '@/services/auth';
 
 const BASE_CLASSES =
   'inline-flex items-center justify-center h-9 px-3 font-mono text-xs uppercase tracking-[0.2em] ' +
@@ -19,10 +19,18 @@ const BASE_CLASSES =
   'focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-cobalto ' +
   'focus-visible:ring-offset-2 focus-visible:ring-offset-ink-cobalto';
 
-export function LogoutButton({ className = '' }: { className?: string }) {
+export function LogoutButton({
+  className = '',
+  clientId,
+  region,
+}: {
+  className?: string;
+  clientId: string;
+  region: string;
+}) {
   const navigate = useNavigate();
   const handleClick = () => {
-    sessionStore.getState().clear();
+    void authService.logout({ clientId, region });
     navigate('/login');
   };
   return (
