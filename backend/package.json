@@ -29,6 +29,8 @@
     "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {
+    "@emnapi/core": "^1.7.1",
+    "@emnapi/runtime": "^1.7.1",
     "@types/aws-lambda": "^8.10.142",
     "@types/node": "^24.0.0",
     "@vitest/coverage-v8": "^4.1.10",
