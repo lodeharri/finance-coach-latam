@@ -232,6 +232,82 @@ describe('authService', () => {
     expect(sessionStore.getState().idToken).toBeUndefined();
   });
 
+  it('logout({clientId, region}) calls Cognito RevokeToken with the refresh token and clears the session', async () => {
+    sessionApi.setSession({
+      idToken: 'a',
+      refreshToken: 'refresh-xyz',
+      expiresAt: 1,
+      userId: 'u',
+      email: 'a@b.com',
+      role: 'user',
+    });
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }));
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    await authService.logout({ clientId: 'c1', region: 'r1' });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://cognito-idp.r1.amazonaws.com/');
+    expect((init.headers as Record<string, string>)['X-Amz-Target']).toBe(
+      'AWSCognitoIdentityProviderService.RevokeToken',
+    );
+    const body = JSON.parse(init.body as string) as Record<string, unknown>;
+    expect(body).toEqual({ ClientId: 'c1', Token: 'refresh-xyz' });
+    expect(sessionStore.getState().refreshToken).toBeUndefined();
+  });
+
+  it('logout({clientId, region}) swallows fetch failures and still clears the session', async () => {
+    sessionApi.setSession({
+      idToken: 'a',
+      refreshToken: 'refresh-xyz',
+      expiresAt: 1,
+      userId: 'u',
+      email: 'a@b.com',
+      role: 'user',
+    });
+    const fetchMock = vi.fn().mockRejectedValue(new Error('network down'));
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    await expect(authService.logout({ clientId: 'c1', region: 'r1' })).resolves.toBeUndefined();
+    expect(sessionStore.getState().idToken).toBeUndefined();
+    expect(sessionStore.getState().refreshToken).toBeUndefined();
+  });
+
+  it('logout() with no args skips the RevokeToken call but still clears the session', async () => {
+    sessionApi.setSession({
+      idToken: 'a',
+      refreshToken: 'r',
+      expiresAt: 1,
+      userId: 'u',
+      email: 'a@b.com',
+      role: 'user',
+    });
+    const fetchMock = vi.fn();
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    await authService.logout();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(sessionStore.getState().idToken).toBeUndefined();
+  });
+
+  it('logout({clientId}) with missing region skips the RevokeToken call but still clears the session', async () => {
+    sessionApi.setSession({
+      idToken: 'a',
+      refreshToken: 'r',
+      expiresAt: 1,
+      userId: 'u',
+      email: 'a@b.com',
+      role: 'user',
+    });
+    const fetchMock = vi.fn();
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    await authService.logout({ clientId: 'c1', region: '' });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(sessionStore.getState().idToken).toBeUndefined();
+  });
+
   it('login() returns a NEW_PASSWORD_REQUIRED signal when Cognito issues the challenge instead of throwing', async () => {
     globalThis.fetch = (() =>
       Promise.resolve(

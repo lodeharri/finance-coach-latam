@@ -72,7 +72,7 @@ function resolveRoleFromGroups(groups: readonly string[]): Role | undefined {
   return undefined;
 }
 
-type CognitoAction = 'InitiateAuth' | 'RespondToAuthChallenge';
+type CognitoAction = 'InitiateAuth' | 'RespondToAuthChallenge' | 'RevokeToken';
 
 async function postCognito<T>(
   region: string,
@@ -216,7 +216,21 @@ export const authService = {
     });
   },
 
-  logout(): void {
+  async logout(args?: { clientId: string; region: string }): Promise<void> {
+    if (args?.clientId && args?.region) {
+      const { refreshToken } = sessionStore.getState();
+      if (refreshToken) {
+        try {
+          await postCognito<Record<string, unknown>>(
+            args.region,
+            { ClientId: args.clientId, Token: refreshToken },
+            'RevokeToken',
+          );
+        } catch {
+          // Swallow — logout must never be blocked by remote.
+        }
+      }
+    }
     sessionStore.getState().clear();
   },
 };

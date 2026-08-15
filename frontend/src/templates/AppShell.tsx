@@ -111,7 +111,10 @@ export function AppShell({ pageName, role, children }: AppShellProps) {
               {sessionUserIdentity}
             </span>
           ) : null}
-          <LogoutButton />
+          <LogoutButton
+            clientId={import.meta.env.VITE_COGNITO_USER_POOL_CLIENT_ID ?? ''}
+            region={import.meta.env.VITE_COGNITO_REGION ?? ''}
+          />
         </div>
       </header>
       <div className="flex min-h-[calc(100vh-64px)]">
