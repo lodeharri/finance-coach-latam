@@ -6,7 +6,7 @@
  * fields, email format validation, the JetBrains-Mono email display via
  * FormField type=email, and the admin create mutation pending UI.
  */
-import { describe, expect, it, beforeEach, afterEach } from 'vitest';
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, waitFor, userEvent } from '@/test/test-utils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
@@ -261,5 +261,43 @@ describe('UserForm', () => {
     expect(await screen.findByText(/email already in use/i)).toBeInTheDocument();
     const alerts = screen.getAllByRole('alert');
     expect(alerts.some((el) => /email already in use/i.test(el.textContent ?? ''))).toBe(true);
+  });
+
+  it('keeps the temp password card visible until the admin clicks Listo', async () => {
+    const onCreated = vi.fn();
+    let posted: { tempPassword: string } | null = null;
+    server.use(
+      http.post(`${BASE}/users`, async ({ request }) => {
+        const body = (await request.json()) as { tempPassword: string };
+        posted = { tempPassword: body.tempPassword };
+        return HttpResponse.json(
+          {
+            id: 'u-new',
+            email: 'jane@example.com',
+            name: 'Jane',
+            tier: 'BRONZE',
+            createdAt: new Date().toISOString(),
+          },
+          { status: 201 },
+        );
+      }),
+    );
+
+    const user = userEvent.setup();
+    wrap(<UserForm apiBaseUrl={BASE} onCreated={onCreated} />);
+
+    await user.type(screen.getByLabelText(/correo/i), 'jane@example.com');
+    await user.type(screen.getByLabelText(/nombre/i), 'Jane');
+    await user.click(screen.getByRole('button', { name: /agregar usuario/i }));
+
+    const card = await screen.findByTestId('user-generated-password');
+    expect(card).toBeInTheDocument();
+    expect(posted).not.toBeNull();
+    expect(card.textContent).toContain(posted!.tempPassword);
+    expect(onCreated).not.toHaveBeenCalled();
+
+    await user.click(screen.getByTestId('user-generated-password-close'));
+
+    expect(onCreated).toHaveBeenCalledTimes(1);
   });
 });
