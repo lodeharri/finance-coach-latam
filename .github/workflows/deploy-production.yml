@@ -153,14 +153,6 @@ jobs:
           test -n "$VITE_API_BASE_URL" || (echo "VITE_API_BASE_URL is empty" && exit 1)
           test -n "$VITE_COGNITO_USER_POOL_CLIENT_ID" || (echo "VITE_COGNITO_USER_POOL_CLIENT_ID is empty" && exit 1)
 
-      - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: frontend
-          command: pages deploy dist --project-name=finance-coach-latam --branch=main
-
       - name: Smoke (Pages URL reachable)
         run: |
           URL="https://finance-coach-latam.pages.dev"
